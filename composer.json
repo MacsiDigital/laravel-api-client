@@ -1,0 +1,57 @@
+{
+    "name": "macsidigital/laravel-api-builder",
+    "description": "Laravel API Builder package",
+    "keywords": [
+        "macsidigital",
+        "laravel-api-builder"
+    ],
+    "homepage": "https://github.com/macsidigital/laravel-api-builder",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Colin Hall",
+            "email": "colin@macsi.co.uk"
+        }
+    ],
+    "require": {
+        "php": "^7.2",
+        "nesbot/carbon": "^2.0",
+        "guzzlehttp/guzzle": "~6.0|~5.0|~4.0",
+        "firebase/php-jwt": "^5.0",
+        "illuminate/support": "^6.0|^7.0"
+    },
+    "require-dev": {
+        "mockery/mockery": "^1.0",
+        "orchestra/testbench": "^4.0",
+        "phpunit/phpunit": "^7.0"
+    }, 
+    "autoload": {
+        "psr-4": {
+            "MacsiDigital\\API\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MacsiDigital\\API\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "MacsiDigital\\API\\Providers\\APIServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    }
+}
