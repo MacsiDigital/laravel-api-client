@@ -64,39 +64,6 @@ class Resource
     }
 
     /**
-     * Get the primary key for the model.
-     *
-     * @return string
-     */
-    public function getKeyName()
-    {
-        return $this->primaryKey;
-    }
-
-    /**
-     * Set the primary key for the model.
-     *
-     * @param  string  $key
-     * @return $this
-     */
-    public function setKeyName($key)
-    {
-        $this->primaryKey = $key;
-
-        return $this;
-    }
-
-    /**
-     * Get the value of the model's primary key.
-     *
-     * @return mixed
-     */
-    public function getKey()
-    {
-        return $this->getAttribute($this->getKeyName());
-    }
-
-    /**
      * Dynamically retrieve attributes on the model.
      *
      * @param  string  $key

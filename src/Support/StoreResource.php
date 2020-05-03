@@ -5,16 +5,16 @@ namespace MacsiDigital\API\Support;
 use Illuminate\Support\Facades\Validator;
 use MacsiDigital\API\Traits\HasAttributes;
 
-class UpdateResource
+class StoreResource
 {
     use HasAttributes;
 
-    protected $updateAttributes = [];
+    protected $storeAttributes;
 
     public function fill(array $attributes)
     {
         foreach ($attributes as $key => $value) {
-        	if(array_key_exists($key, $this->getUpdateAttributeKeys())){
+        	if(array_key_exists($key, $this->getStoreAttributeKeys())){
             	$this->setAttribute($key, $value);
         	}
         }
@@ -24,17 +24,16 @@ class UpdateResource
 
     public function getValidationAttributes()
     {
-    	return $this->updateAttributes;
+    	return $this->storeAttributes;
     }
 
-    public function getUpdateAttributeKeys()
+    public function getStoreAttributeKeys()
     {
-    	return array_keys($this->updateAttributes);
+    	return array_keys($this->storeAttributes);
     }
 
     public function validate()
     {
     	return Validator::make($this->getArrayableAttributes(), $this->getValidationAttributes());
     }
-
 }

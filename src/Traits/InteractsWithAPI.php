@@ -12,14 +12,11 @@ trait InteractsWithAPI
     protected $allowedMethods = ['index', 'create', 'show', 'update', 'delete'];
     protected $endPoint = 'user';
 
-    protected $insertResource;
+    protected $storeResource;
     protected $updateResource;
 
-    /**
-     * Begin querying the model.
-     *
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
+    protected $primaryKey = 'id';
+
     public static function query($resource)
     {
         return new Builder($resource);
@@ -28,6 +25,28 @@ trait InteractsWithAPI
     public function newQuery() 
     {
         return self::query($this);
+    }
+
+    public function getKeyName()
+    {
+        return $this->primaryKey;
+    }
+
+    public function setKeyName($key)
+    {
+        $this->primaryKey = $key;
+
+        return $this;
+    }
+
+    public function getKey()
+    {
+        return $this->getAttribute($this->getKeyName());
+    }
+
+    public function exists()
+    {
+        return $this->getKey() != null;
     }
 
     public function getEndPoint($type='index') 
@@ -90,7 +109,23 @@ trait InteractsWithAPI
      */
     public function update(array $attributes = [], array $options = [])
     {
-        if (! $this->exists) {
+        if ($this->exists()) {
+            return false;
+        }
+
+        return $this->fill($attributes)->save($options);
+    }
+
+    /**
+     * Update the model in the database.
+     *
+     * @param  array  $attributes
+     * @param  array  $options
+     * @return bool
+     */
+    public function create(array $attributes = [], array $options = [])
+    {
+        if (!$this->exists()) {
             return false;
         }
 
@@ -107,21 +142,15 @@ trait InteractsWithAPI
     {
         $this->mergeAttributesFromClassCasts();
 
-        $query = $this->newModelQuery();
+        $query = $this->newQuery();
 
-        // If the "saving" event returns false we'll bail out of the save and return
-        // false, indicating that the save failed. This provides a chance for any
-        // listeners to cancel save operations if validations fail or whatever.
-        if ($this->fireModelEvent('saving') === false) {
-            return false;
-        }
+        $this->beforeSave($options);
 
         // If the model already exists in the database we can just update our record
         // that is already in this database using the current IDs in this "where"
         // clause to only update this model. Otherwise, we'll just insert them.
-        if ($this->exists) {
-            $saved = $this->isDirty() ?
-                        $this->performUpdate($query) : true;
+        if ($this->exists()) {
+            $saved = $this->performUpdate($query);
         }
 
         // If the model is brand new, we'll insert it into our database and set the
@@ -129,18 +158,13 @@ trait InteractsWithAPI
         // which is typically an auto-increment value managed by the database.
         else {
             $saved = $this->performInsert($query);
-
-            if (! $this->getConnectionName() &&
-                $connection = $query->getConnection()) {
-                $this->setConnection($connection->getName());
-            }
         }
 
         // If the model is successfully saved, we need to do a few more things once
         // that is done. We will call the "saved" method here to run any actions
         // we need to happen after a model gets successfully saved right here.
         if ($saved) {
-            $this->finishSave($options);
+            $this->afterSave($options);
         }
 
         return $saved;
@@ -154,32 +178,15 @@ trait InteractsWithAPI
      */
     protected function performUpdate(Builder $query)
     {
-        // If the updating event returns false, we will cancel the update operation so
-        // developers can hook Validation systems into their models and cancel this
-        // operation if the model does not pass validation. Otherwise, we update.
-        if ($this->fireModelEvent('updating') === false) {
-            return false;
+        $resource = (new $this->updateResource)->fill($this->getAttributes());
+
+        $validation = $resource->validate();
+
+        if ($validator->fails()) {
+            throw new ValidationFailedExcpetion($validator);
         }
 
-        // First we need to create a fresh query instance and touch the creation and
-        // update timestamp on the model which are maintained by us for developer
-        // convenience. Then we will just continue saving the model instances.
-        if ($this->usesTimestamps()) {
-            $this->updateTimestamps();
-        }
-
-        // Once we have run the update operation, we will fire the "updated" event for
-        // this model instance. This will allow developers to hook into these after
-        // models are updated, giving them a chance to do any special processing.
-        $dirty = $this->getDirty();
-
-        if (count($dirty) > 0) {
-            $this->setKeysForSaveQuery($query)->update($dirty);
-
-            $this->syncChanges();
-
-            $this->fireModelEvent('updated', false);
-        }
+        $query->update($resource->toArray());
 
         return true;
     }
@@ -192,61 +199,27 @@ trait InteractsWithAPI
      */
     protected function performInsert(Builder $query)
     {
-        if ($this->fireModelEvent('creating') === false) {
-            return false;
+        $resource = (new $this->storeResource)->fill($this->getAttributes());
+
+        $validation = $resource->validate();
+
+        if ($validator->fails()) {
+            throw new ValidationFailedExcpetion($validator);
         }
 
-        // First we'll need to create a fresh query instance and touch the creation and
-        // update timestamps on this model, which are maintained by us for developer
-        // convenience. After, we will just continue saving these model instances.
-        if ($this->usesTimestamps()) {
-            $this->updateTimestamps();
-        }
-
-        // If the model has an incrementing key, we can use the "insertGetId" method on
-        // the query builder, which will give us back the final inserted ID for this
-        // table from the database. Not all tables have to be incrementing though.
-        $attributes = $this->getAttributes();
-
-        if ($this->getIncrementing()) {
-            $this->insertAndSetId($query, $attributes);
-        }
-
-        // If the table isn't incrementing we'll simply insert these attributes as they
-        // are. These attribute arrays must contain an "id" column previously placed
-        // there by the developer as the manually determined key for these models.
-        else {
-            if (empty($attributes)) {
-                return true;
-            }
-
-            $query->insert($attributes);
-        }
-
-        // We will go ahead and set the exists property to true, so that it is set when
-        // the created event is fired, just in case the developer tries to update it
-        // during the event. This will allow them to do so and run an update here.
-        $this->exists = true;
-
-        $this->wasRecentlyCreated = true;
-
-        $this->fireModelEvent('created', false);
+        $query->insert($resource->toArray());
 
         return true;
     }
 
-    /**
-     * Insert the given attributes and set the ID on the model.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  array  $attributes
-     * @return void
-     */
-    protected function insertAndSetId(Builder $query, $attributes)
+    public function beforeSave()
     {
-        $id = $query->insertGetId($attributes, $keyName = $this->getKeyName());
+        
+    }
 
-        $this->setAttribute($keyName, $id);
+    public function afterSave()
+    {
+        
     }
 
     /**

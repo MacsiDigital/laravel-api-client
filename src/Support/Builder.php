@@ -37,7 +37,7 @@ class Builder
     	}
     	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
     	if($response->ok()){
-    		return $response->json()['data'];
+    		return $this->hydrate($response->json()['data']);
     	} else if($response->getStatusCode() == 404) {
     		return null;
     	} else {
@@ -49,7 +49,7 @@ class Builder
     {
     	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
     	if($response->ok()){
-    		return $response->json()['data'];
+    		return $this->hydrate($response->json()['data']);
     	} else if($response->getStatusCode() == 404) {
     		return $response->throw();
     	} else {
@@ -87,7 +87,7 @@ class Builder
     	}
     	$response = $this->request->post($this->retreiveEndPoint('create'), $attributes, $this->combineQueries());
     	if($response->ok()){
-    		return $this->data = $this->collect($response->json()['data']);
+    		return $this->hydrate($response->json()['data']);
     	} else {
     		dd($response);
     	}
@@ -100,7 +100,7 @@ class Builder
     	}
     	$response = $this->request->patch($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
     	if($response->ok()){
-    		return $this->data = $this->collect($response->json()['data']);
+    		return $this->hydrate($response->json()['data']);
     	} else {
     		dd($response);
     	}
@@ -113,7 +113,7 @@ class Builder
     	}
     	$response = $this->request->put($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
     	if($response->ok()){
-    		return $this->data = $this->collect($response->json()['data']);
+    		return $this->hydrate($response->json()['data']);
     	} else {
     		dd($response);
     	}
@@ -125,7 +125,7 @@ class Builder
     	if($response->ok()){
     		return true;
     	} else {
-    		
+    		return false;
     	}
     }
 

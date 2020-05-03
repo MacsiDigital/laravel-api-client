@@ -2,10 +2,8 @@
 
 namespace MacsiDigital\API\Dev;
 
-use Illuminate\Support\Facades\Http;
 use MacsiDigital\API\Facades\Client;
 use MacsiDigital\API\Support\Entry;
-use MacsiDigital\API\Support\Authentication\NoAuthentication;
 
 class Api extends Entry
 {

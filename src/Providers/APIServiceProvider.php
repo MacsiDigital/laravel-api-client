@@ -2,6 +2,8 @@
 
 namespace MacsiDigital\API\Providers;
 
+use MacsiDigital\API\Dev\User;
+use MacsiDigital\API\Support\Entry;
 use Illuminate\Support\ServiceProvider;
 
 class APIServiceProvider extends ServiceProvider
@@ -20,5 +22,10 @@ class APIServiceProvider extends ServiceProvider
     {
         // Register the main class to use with the facade
         $this->app->bind('api.client', 'MacsiDigital\API\Support\PendingRequest');
+
+        // $this->app->bind(Entry::class, function ($app) {
+        //     return new Entry();
+        // });
+
     }
 }
