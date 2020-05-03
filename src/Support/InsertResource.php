@@ -5,9 +5,8 @@ namespace MacsiDigital\API\Support;
 use MacsiDigital\API\Traits\HasAttributes;
 use MacsiDigital\API\Exceptions\ValidationFailedException;
 
-class InsertModel
+class InsertResource
 {
-
     use HasAttributes;
 
     protected $validationAttributes = [];

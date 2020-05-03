@@ -1,18 +1,22 @@
-# Laravel package for Accessing API's
+# Laravel package for Building API Client's
 
-A little API Builder Library
+A little API Client Builder Library
 
 ## Installation
 
 You can install the package via composer:
 
 ```bash
-composer require macsidigital/laravel-api-builder
+composer require macsidigital/laravel-api-client
 ```
 
 ## Usage
 
-The main aim of this library is to add a common set of traits to models to be able to create, update, retrieve and delete records when accessing API's.  OBviously all API's are different so you should check documentation on how best to implement with these traits.
+The main aim of this library is to add a common set of traits to models to be able to create, update, retrieve and delete records when accessing API's.  Obviously all API's are different so you should check documentation on how best to implement with these traits.
+
+The basic concept is you build a client in the API library that you create which extends on the models in this library.
+
+There are some authentication models included but its pretty simple to roll your own, Thanks to Taylor Otwell we now extend the new Laravel HTTP\Client library.
 
 ### Changelog
 

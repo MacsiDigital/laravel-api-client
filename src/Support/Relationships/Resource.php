@@ -1,17 +1,18 @@
 <?php
+namespace MacsiDigital\API\Support\Relationships;
 
-namespace MacsiDigital\API\Support;
-
-use MacsiDigital\API\Traits\HasAttributes;
+use MacsiDigital\API\Support\Builder;
 use MacsiDigital\API\Traits\BuildsQueries;
+use MacsiDigital\API\Traits\HasAttributes;
 use MacsiDigital\API\Traits\HasRelationships;
 
-class Model
+class Resource
 {
 	use HasAttributes, BuildsQueries, HasRelationships;
 
-    protected $insertModel;
-    protected $updateModel;
+    protected $insertResource;
+    protected $updateResource;
+    protected $endPoint = 'user';
 
 	 /**
      * Get all of the models from the database.
@@ -240,9 +241,14 @@ class Model
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public static function query()
+    public static function query($endPoint)
     {
-        return new Builder($query);
+        return new Builder($endPoint);
+    }
+
+    public function newQuery() 
+    {
+        return self::query($this->endPoint);
     }
 
     /**

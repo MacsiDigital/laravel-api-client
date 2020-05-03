@@ -687,6 +687,23 @@ trait HasAttributes
     }
 
     /**
+     * Fill the model with an array of attributes.
+     *
+     * @param  array  $attributes
+     * @return $this
+     *
+     * @throws \Illuminate\Database\Eloquent\MassAssignmentException
+     */
+    public function fill(array $attributes)
+    {
+        foreach ($attributes as $key => $value) {
+            $this->setAttribute($key, $value);
+        }
+
+        return $this;
+    }
+
+    /**
      * Set a given JSON attribute on the model.
      *
      * @param  string  $key
@@ -955,14 +972,7 @@ trait HasAttributes
      */
     public function getDates()
     {
-        $defaults = [
-            $this->getCreatedAtColumn(),
-            $this->getUpdatedAtColumn(),
-        ];
-
-        return $this->usesTimestamps()
-                    ? array_unique(array_merge($this->dates, $defaults))
-                    : $this->dates;
+        return $this->dates;
     }
 
     /**
@@ -1011,10 +1021,6 @@ trait HasAttributes
      */
     public function getCasts()
     {
-        if ($this->getIncrementing()) {
-            return array_merge([$this->getKeyName() => $this->getKeyType()], $this->casts);
-        }
-
         return $this->casts;
     }
 

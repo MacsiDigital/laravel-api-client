@@ -63,17 +63,6 @@ trait BuildsQueries
     }
 
     /**
-     * Execute the query and get the first result.
-     *
-     * @param  array  $columns
-     * @return \Illuminate\Database\Eloquent\Model|object|static|null
-     */
-    public function first($columns = ['*'])
-    {
-        return $this->take(1)->get($columns)->first();
-    }
-
-    /**
      * Apply the callback's query changes if the given "value" is true.
      *
      * @param  mixed  $value

@@ -1,6 +1,6 @@
 <?php
 
-namespace API\Contracts;
+namespace MacsiDigital\API\Support\Relationships;
 
 use MacsiDigital\API\Contracts\Relation;
 
