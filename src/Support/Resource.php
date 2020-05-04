@@ -2,27 +2,12 @@
 namespace MacsiDigital\API\Support;
 
 use MacsiDigital\API\Contracts\Client;
-use MacsiDigital\API\Traits\BuildsQueries;
-use MacsiDigital\API\Traits\ForwardsCalls;
 use MacsiDigital\API\Traits\HasAttributes;
 use MacsiDigital\API\Traits\HasRelationships;
-use MacsiDigital\API\Traits\InteractsWithAPI;
 
 class Resource
 {
-	use InteractsWithAPI, HasAttributes, BuildsQueries, HasRelationships, ForwardsCalls;
-
-    public $client;
-
-    public function __construct(Entry $client)
-    {
-        $this->client = $client;
-    }
-
-    public function fresh() 
-    {
-        return new static($this->client);
-    }
+	use HasAttributes, HasRelationships;
 
     /**
      * Convert the model instance to an array.
