@@ -2,9 +2,9 @@
 
 namespace MacsiDigital\API\Dev;
 
-use MacsiDigital\API\Support\Resource;
+use MacsiDigital\API\Support\ApiResource;
 
-class User extends Resource
+class User extends ApiResource
 {
 
 	protected $storeResource = 'MacsiDigital\Api\Dev\Resources\StoreUser';

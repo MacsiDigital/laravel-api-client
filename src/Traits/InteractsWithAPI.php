@@ -4,9 +4,12 @@ namespace MacsiDigital\API\Traits;
 
 use Illuminate\Support\Str;
 use MacsiDigital\API\Support\Builder;
+use Illuminate\Support\Traits\ForwardsCalls;
 
 trait InteractsWithAPI
 {
+    use ForwardsCalls;
+    
     // index, create, show, update, delete
     // Allow all methods by default
     protected $allowedMethods = ['index', 'create', 'show', 'update', 'delete'];
