@@ -1,13 +1,26 @@
 <?php
 namespace MacsiDigital\API\Support;
 
-use MacsiDigital\API\Contracts\Client;
+use MacsiDigital\API\Contracts\Entry;
 use MacsiDigital\API\Traits\HasAttributes;
+use MacsiDigital\API\Traits\HidesAttributes;
 use MacsiDigital\API\Traits\HasRelationships;
 
 class Resource
 {
-	use HasAttributes, HasRelationships;
+	use HasAttributes, HasRelationships, HidesAttributes;
+
+    public $client;
+
+    public function __construct(Entry $client)
+    {
+        $this->client = $client;
+    }
+
+    public function fresh() 
+    {
+        return new static($this->client);
+    }
 
     /**
      * Convert the model instance to an array.

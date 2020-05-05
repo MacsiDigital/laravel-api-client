@@ -5,6 +5,8 @@ namespace MacsiDigital\API\Traits;
 use Illuminate\Support\Str;
 use MacsiDigital\API\Support\Builder;
 use Illuminate\Support\Traits\ForwardsCalls;
+use MacsiDigital\API\Exceptions\ValidationFailedException;
+use MacsiDigital\API\Exceptions\CantDeleteException;
 
 trait InteractsWithAPI
 {
@@ -13,12 +15,16 @@ trait InteractsWithAPI
     // index, create, show, update, delete
     // Allow all methods by default
     protected $allowedMethods = ['index', 'create', 'show', 'update', 'delete'];
+
     protected $endPoint = 'user';
+    protected $updateMethod = 'patch';
 
     protected $storeResource;
     protected $updateResource;
 
     protected $primaryKey = 'id';
+
+    protected $apiDataField = 'data';
 
     public static function query($resource)
     {
@@ -28,6 +34,16 @@ trait InteractsWithAPI
     public function newQuery() 
     {
         return self::query($this);
+    }
+
+    public function getApiDataField()
+    {
+        return $this->apiDataField;
+    }
+
+    public function getUpdateMethod()
+    {
+        return $this->updateMethod;
     }
 
     public function getKeyName()
@@ -55,7 +71,7 @@ trait InteractsWithAPI
     public function getEndPoint($type='index') 
     {
         if($this->canPerform($type)){
-            return $this->{'get'.Str::studly($type).'endPoint'}();
+            return $this->{'get'.Str::studly($type).'EndPoint'}();
         } else {
             throw new InvalidActionException(sprintf(
                 '%s action not allowed for %s', Str::studly($type), static::class
@@ -83,7 +99,7 @@ trait InteractsWithAPI
         return $this->endPoint;
     }
 
-    public function getInsertEndPoint() 
+    public function getCreateEndPoint() 
     {
         return $this->endPoint;
     }
@@ -95,12 +111,18 @@ trait InteractsWithAPI
 
     public function getUpdateEndPoint() 
     {
-        return $this->endPoint.'/';
+        if($this->exists()){
+            return $this->endPoint.'/'.$this->getKey();
+        }
+        throw new KeyNotFoundException(static::class);
     }
 
     public function getDeleteEndPoint() 
     {
-        return $this->endPoint.'/';
+        if($this->exists()){
+            return $this->endPoint.'/'.$this->getKey();
+        }
+        throw new KeyNotFoundException(static::class);
     }
 
     /**
@@ -112,7 +134,7 @@ trait InteractsWithAPI
      */
     public function update(array $attributes = [], array $options = [])
     {
-        if ($this->exists()) {
+        if (!$this->exists()) {
             return false;
         }
 
@@ -128,10 +150,10 @@ trait InteractsWithAPI
      */
     public function create(array $attributes = [], array $options = [])
     {
-        if (!$this->exists()) {
+        if ($this->exists()) {
             return false;
         }
-
+        
         return $this->fill($attributes)->save($options);
     }
 
@@ -148,29 +170,33 @@ trait InteractsWithAPI
         $query = $this->newQuery();
 
         $this->beforeSave($options);
-
+        
         // If the model already exists in the database we can just update our record
         // that is already in this database using the current IDs in this "where"
         // clause to only update this model. Otherwise, we'll just insert them.
         if ($this->exists()) {
-            $saved = $this->performUpdate($query);
+            $resource = $this->performUpdate($query);
         }
-
         // If the model is brand new, we'll insert it into our database and set the
         // ID attribute on the model to the value of the newly inserted row's ID
         // which is typically an auto-increment value managed by the database.
         else {
-            $saved = $this->performInsert($query);
+            $resource = $this->performInsert($query);
         }
 
         // If the model is successfully saved, we need to do a few more things once
         // that is done. We will call the "saved" method here to run any actions
         // we need to happen after a model gets successfully saved right here.
-        if ($saved) {
+        if (!$resource->hasApiError()) {
             $this->afterSave($options);
         }
+        
+        return $resource;
+    }
 
-        return $saved;
+    public function hasApiError() 
+    {
+        return isset($this->status_code);
     }
 
     /**
@@ -181,17 +207,15 @@ trait InteractsWithAPI
      */
     protected function performUpdate(Builder $query)
     {
-        $resource = (new $this->updateResource)->fill($this->getAttributes());
-
-        $validation = $resource->validate();
+        $resource = (new $this->updateResource)->fill($this->package()->toArray());
+        
+        $validator = $resource->validate();
 
         if ($validator->fails()) {
-            throw new ValidationFailedExcpetion($validator);
+            throw new ValidationFailedException($validator->errors());
         }
 
-        $query->update($resource->toArray());
-
-        return true;
+        return $query->{$this->getUpdateMethod()}($resource->getAttributes());
     }
 
     /**
@@ -202,17 +226,15 @@ trait InteractsWithAPI
      */
     protected function performInsert(Builder $query)
     {
-        $resource = (new $this->storeResource)->fill($this->getAttributes());
-
-        $validation = $resource->validate();
+        $resource = (new $this->storeResource)->fill($this->package()->toArray());
+        
+        $validator = $resource->validate();
 
         if ($validator->fails()) {
-            throw new ValidationFailedExcpetion($validator);
+            throw new ValidationFailedException($validator->errors());
         }
 
-        $query->insert($resource->toArray());
-
-        return true;
+        return $query->post($resource->getAttributes());;
     }
 
     public function beforeSave()
@@ -236,34 +258,34 @@ trait InteractsWithAPI
     {
         $this->mergeAttributesFromClassCasts();
 
+        $query = $this->newQuery();
+
         if (is_null($this->getKeyName())) {
             throw new Exception('No primary key defined on model.');
         }
 
-        // If the model doesn't exist, there is nothing to delete so we'll just return
-        // immediately and not do anything else. Otherwise, we will continue with a
-        // deletion process on the model, firing the proper events, and so forth.
-        if (! $this->exists) {
+        if (! $this->exists()) {
             return;
         }
+        $this->beforeDeleting();
 
-        if ($this->fireModelEvent('deleting') === false) {
-            return false;
+        $response = $query->delete();
+        if($response->successful()){
+            $this->afterDeleting();
+        //} else {
+            //throw new CantDeleteException(static::class, $this->getKey());
         }
+        return $response;
+    }
 
-        // Here, we'll touch the owning models, verifying these timestamps get updated
-        // for the models. This will allow any caching to get broken on the parents
-        // by the timestamp. Then we will go ahead and delete the model instance.
-        $this->touchOwners();
+    public function beforeDeleting()
+    {
+        
+    }
 
-        $this->performDeleteOnModel();
-
-        // Once the model has been deleted, we will fire off the deleted event so that
-        // the developers may hook into post-delete operations. We will then return
-        // a boolean true as the delete is presumably successful on the database.
-        $this->fireModelEvent('deleted', false);
-
-        return true;
+    public function afterDeleting()
+    {
+        
     }
 
         /**

@@ -27,6 +27,11 @@ class Builder
 		return $this->resource->getEndPoint($type);
 	}
 
+    protected function getApiDataField()
+    {
+        return $this->resource->getApiDataField();
+    }
+
     public function find($id, $column="") 
     {
     	if(is_array($id)){
@@ -37,11 +42,11 @@ class Builder
     	}
     	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
     	if($response->ok()){
-    		return $this->hydrate($response->json()['data']);
+    		return $this->hydrate($response);
     	} else if($response->getStatusCode() == 404) {
     		return null;
     	} else {
-
+            return $response;
     	}
     }
 
@@ -49,11 +54,11 @@ class Builder
     {
     	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
     	if($response->ok()){
-    		return $this->hydrate($response->json()['data']);
+    		return $this->hydrate($response);
     	} else if($response->getStatusCode() == 404) {
     		return $response->throw();
     	} else {
-
+            return $response;
     	}
     }
 
@@ -61,9 +66,9 @@ class Builder
     {
     	$response = $this->request->get($this->retreiveEndPoint('index'), $this->combineQueries());
     	if($response->ok()){
-    		return $this->collect($response->json()['data']);
+    		return $this->collect($response);
     	} else {
-
+            return $response;
     	}
     }
 
@@ -74,59 +79,45 @@ class Builder
     	}
     	$response = $this->request->get($this->retreiveEndPoint(), $this->combineQueries());
     	if($response->ok()){
-    		return $this->data = $this->collect($response->json()['data']);
+    		return $this->data = $this->collect($response);
     	} else {
-    		dd($response);
+    		return $response;
     	}
     }
 
     public function post($attributes)
     {
-    	if($this->data != null){
-    		return $this->data;
-    	}
     	$response = $this->request->post($this->retreiveEndPoint('create'), $attributes, $this->combineQueries());
-    	if($response->ok()){
-    		return $this->hydrate($response->json()['data']);
+    	if($response->successful()){
+    		return $this->hydrate($response, false);
     	} else {
-    		dd($response);
+            return $this->update(['status_code' => $response->status(), 'response' => $response]);
     	}
     }
 
     public function patch($attributes)
     {
-    	if($this->data != null){
-    		return $this->data;
-    	}
     	$response = $this->request->patch($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
-    	if($response->ok()){
-    		return $this->hydrate($response->json()['data']);
+    	if($response->successful()){
+    		return $this->hydrate($response, false);
     	} else {
-    		dd($response);
+            return $this->update(['status_code' => $response->status(), 'response' => $response]);
     	}
     }
 
     public function put($attributes)
     {
-    	if($this->data != null){
-    		return $this->data;
-    	}
     	$response = $this->request->put($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
-    	if($response->ok()){
-    		return $this->hydrate($response->json()['data']);
+    	if($response->successful()){
+    		return $this->hydrate($response, false);
     	} else {
-    		dd($response);
+    		return $this->update(['status_code' => $response->status(), 'response' => $response]);
     	}
     }
 
-    public function delete($id) 
+    public function delete() 
     {
-    	$response = $this->request->get($this->retreiveEndPoint('delete').$id, $this->combineQueries());
-    	if($response->ok()){
-    		return true;
-    	} else {
-    		return false;
-    	}
+    	return $this->request->delete($this->retreiveEndPoint('delete'), $this->combineQueries());
     }
 
     public function first()
@@ -241,18 +232,32 @@ class Builder
     	return $this;
     }
     
-    protected function collect($data)
+    protected function collect($response)
     {
 		$collection = new Collection;
-    	foreach($data as $record){
-    		$collection->push($this->hydrate($record));
+    	foreach($response->json()[$this->getApiDataField()] as $record){
+    		$collection->push($this->create($record));
     	}
     	return $collection;
     }
 
-	protected function hydrate($array)
+    protected function hydrate($response, $fresh=true)
+    {
+        if($fresh){
+            return $this->create($response->json()[$this->getApiDataField()]);
+        } else {
+            return $this->update($response->json()[$this->getApiDataField()]);
+        }
+    }
+
+	protected function create($array)
     {
     	return $this->resource->fresh()->fill($array);
+    }
+
+    protected function update($array)
+    {
+        return $this->resource->fill($array);
     }
 
 }
