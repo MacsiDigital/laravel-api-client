@@ -5,7 +5,10 @@ namespace MacsiDigital\API\Traits;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
-use MacsiDigital\API\Relations\HasOne;
+use MacsiDigital\API\Support\Relations\HasOne;
+use MacsiDigital\API\Support\Relations\HasMany;
+use MacsiDigital\API\Support\Relations\BelongsTo;
+use MacsiDigital\API\Support\Relations\BelongsToMany;
 
 trait HasRelationships
 {
@@ -45,7 +48,7 @@ trait HasRelationships
         return $this->getRelation($name);
     }
 
-    public function belongsTo($related, $name="")
+    public function belongsTo($related, $name="", $field="")
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){
@@ -55,7 +58,7 @@ trait HasRelationships
         return $this->getRelation($name);
     }
 
-    public function hasMany($related, $name="")
+    public function hasMany($related, $name="", $field="")
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){
@@ -65,7 +68,7 @@ trait HasRelationships
         return $this->getRelation($name);
     }
 
-    public function belongsToMany($related, $name="")
+    public function belongsToMany($related, $name="", $field="")
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){

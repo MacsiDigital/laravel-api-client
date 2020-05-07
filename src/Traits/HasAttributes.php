@@ -53,6 +53,12 @@ trait HasAttributes
             if($this->relationLoaded($key)){
                 $this->updateRelationAttribute($key, $value);
                 return $this;
+            } elseif($this->relationLoaded(Str::plural($key))){
+                $this->updateRelationAttribute(Str::plural($key), $value);
+                return $this;
+            } elseif($this->relationLoaded(Str::singular($key))){
+                $this->updateRelationAttribute(Str::singular($key), $value);
+                return $this;
             }
         }
         // First we will check for the presence of a mutator for the set operation
@@ -104,6 +110,8 @@ trait HasAttributes
             $function = $key;
         } elseif ($this->isRelationship(Str::plural($key))) {
             $function = Str::plural($key);
+        } elseif ($this->isRelationship(Str::singular($key))) {
+            $function = Str::singular($key);
         }
         if(isset($function)){
             $this->$function();
@@ -116,11 +124,13 @@ trait HasAttributes
             return;
         }
         if ($this->isRelationship($key)){
-            $this->getRelation($key)->update($value);
+            
         } elseif ($this->isRelationship(Str::plural($key))) {
             $key = Str::plural($key);
-            $this->getRelation($key)->update($value);
+        } elseif ($this->isRelationship(Str::singular($key))) {
+            $key = Str::plural($key);
         }
+        $this->getRelation($key)->update($value);
     }
 
     public function getAttribute($key)

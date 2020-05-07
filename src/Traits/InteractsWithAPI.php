@@ -208,7 +208,6 @@ trait InteractsWithAPI
     protected function performUpdate(Builder $query)
     {
         $resource = (new $this->updateResource)->fill($this->package()->toArray());
-        
         $validator = $resource->validate();
 
         if ($validator->fails()) {
@@ -288,7 +287,7 @@ trait InteractsWithAPI
         
     }
 
-        /**
+    /**
      * Handle dynamic method calls into the model.
      *
      * @param  string  $method

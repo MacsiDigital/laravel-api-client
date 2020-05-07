@@ -9,9 +9,9 @@ class User extends ApiResource
 	protected $storeResource = 'MacsiDigital\API\Dev\Resources\StoreUser';
     protected $updateResource = 'MacsiDigital\API\Dev\Resources\UpdateUser';
 
-    public function address() 
+    public function addresses() 
     {
-    	return $this->hasOne(Address::class);
+    	return $this->hasMany(Address::class);
     }
 
 }

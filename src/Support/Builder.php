@@ -5,6 +5,7 @@ namespace MacsiDigital\API\Support;
 use Illuminate\Support\Str;
 use MacsiDigital\API\Dev\Api;
 use Illuminate\Support\Collection;
+use MacsiDigital\API\Support\ResultSet;
 
 class Builder
 {
@@ -15,12 +16,62 @@ class Builder
 	protected $limit = null;
 	protected $offset = null;
 	protected $data = null;
+    protected $raw = false;
+    protected $paginate = false;
+
+    protected $pageField;
+    protected $perPageField;
+
+    protected $perPage = '';
+    protected $page = 1;
+
+    protected $maxPerPage = '';
+    protected $minPerPage = '';
+
 
 	public function __construct($resource)
 	{
 		$this->request = $resource->client->newRequest();
-		$this->resource = $resource;		
+		$this->resource = $resource;
+        $this->prepare($resource);
 	}
+
+    protected function prepare($resource)
+    {
+        $this->setPerPageField($resource->client->getPerPageField());
+        $this->setPageField($resource->client->getPageField());
+        $this->raw($resource->client->getRaw());
+        $this->paginate($resource->client->getPagination());
+        if($this->shouldPaginate()){
+            $this->setPerPage($resource->client->getDefaultPaginationRecords());
+        }
+        $this->setMaxPerPage($resource->client->getMaxPaginationRecords());
+        $this->setMinPerPage($resource->client->getMinPaginationRecords());
+    }
+
+    protected function setPerPageField($field)
+    {
+        $this->perPageField = $field;
+        return $this;
+    }
+
+    protected function setMaxPerPage($amount)
+    {
+        $this->maxPerPage = $amount;
+        return $this;
+    }
+
+    protected function setMinPerPage($amount)
+    {
+        $this->minPerPage = $amount;
+        return $this;
+    }
+
+    protected function setPageField($field)
+    {
+        $this->pageField = $field;
+        return $this;
+    }
 
 	protected function retreiveEndPoint($type="index")
 	{
@@ -42,8 +93,14 @@ class Builder
     	}
     	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
     	if($response->ok()){
+            if($this->raw){
+                return $response;
+            }
     		return $this->hydrate($response);
     	} else if($response->getStatusCode() == 404) {
+            if($this->raw){
+                return $response;
+            }
     		return null;
     	} else {
             return $response;
@@ -54,8 +111,14 @@ class Builder
     {
     	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
     	if($response->ok()){
+            if($this->raw){
+                return $response;
+            }
     		return $this->hydrate($response);
     	} else if($response->getStatusCode() == 404) {
+            if($this->raw){
+                return $response;
+            }
     		return $response->throw();
     	} else {
             return $response;
@@ -64,9 +127,12 @@ class Builder
 
     public function all() 
     {
-    	$response = $this->request->get($this->retreiveEndPoint('index'), $this->combineQueries());
+    	$response = $this->request->get($this->retreiveEndPoint('index'), $this->addPagination($this->combineQueries()));
     	if($response->ok()){
-    		return $this->collect($response);
+            if($this->raw){
+                return $response;
+            }
+    		return $this->processAllResultSet($response);
     	} else {
             return $response;
     	}
@@ -77,9 +143,12 @@ class Builder
     	if($this->data != null){
     		return $this->data;
     	}
-    	$response = $this->request->get($this->retreiveEndPoint(), $this->combineQueries());
+    	$response = $this->request->get($this->retreiveEndPoint(), $this->addPagination($this->combineQueries()));
     	if($response->ok()){
-    		return $this->data = $this->collect($response);
+            if($this->raw){
+                return $response;
+            }
+    		return $this->data = $this->processResultSet($response);
     	} else {
     		return $response;
     	}
@@ -89,8 +158,14 @@ class Builder
     {
     	$response = $this->request->post($this->retreiveEndPoint('create'), $attributes, $this->combineQueries());
     	if($response->successful()){
+            if($this->raw){
+                return $response;
+            }
     		return $this->hydrate($response, false);
     	} else {
+            if($this->raw){
+                return $response;
+            }
             return $this->update(['status_code' => $response->status(), 'response' => $response]);
     	}
     }
@@ -99,8 +174,14 @@ class Builder
     {
     	$response = $this->request->patch($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
     	if($response->successful()){
+            if($this->raw){
+                return $response;
+            }
     		return $this->hydrate($response, false);
     	} else {
+            if($this->raw){
+                return $response;
+            }
             return $this->update(['status_code' => $response->status(), 'response' => $response]);
     	}
     }
@@ -109,8 +190,14 @@ class Builder
     {
     	$response = $this->request->put($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
     	if($response->successful()){
+            if($this->raw){
+                return $response;
+            }
     		return $this->hydrate($response, false);
     	} else {
+            if($this->raw){
+                return $response;
+            }
     		return $this->update(['status_code' => $response->status(), 'response' => $response]);
     	}
     }
@@ -163,32 +250,67 @@ class Builder
     	return $this->data->count();
     }
 
-    /**
-     * Get the number of models to return per page.
-     *
-     * @return int
-     */
+    public function paginate($status=true) 
+    {
+        $this->paginate = $status;
+        return $this;
+    }
+
+    public function shouldPaginate() 
+    {
+        return $this->paginate;
+    }
+
+    public function getPage()
+    {
+        return $this->page;
+    }
+
     public function getPerPage()
     {
         return $this->perPage;
     }
 
-    /**
-     * Set the number of models to return per page.
-     *
-     * @param  int  $perPage
-     * @return $this
-     */
     public function setPerPage($perPage)
     {
+
         $this->perPage = $perPage;
 
         return $this;
     }
 
+    public function setPage($page)
+    {
+        $this->page = $page;
+
+        return $this;
+    }
+
+    public function raw($status=true) 
+    {
+        $this->raw = $status;
+        return $this;
+    }
+
+    public function isRaw()
+    {
+        return $this->raw;
+    }
+
     public function combineQueries() 
     {
-    	return array_merge($this->queries, $this->orders);
+        return array_merge($this->queries, $this->orders);
+    }
+
+    public function addPagination($array) 
+    {
+        if($this->perPage != ''){
+            $array[$this->perPageField] = $this->perPage;
+        }
+        if($this->page != ''){
+            $array[$this->pageField] = $this->page;
+        }
+        return $array;
     }
 
     public function reset()
@@ -232,13 +354,14 @@ class Builder
     	return $this;
     }
     
-    protected function collect($response)
+    protected function processResultSet($response)
     {
-		$collection = new Collection;
-    	foreach($response->json()[$this->getApiDataField()] as $record){
-    		$collection->push($this->create($record));
-    	}
-    	return $collection;
+    	return new ResultSet($this, $response, $this->resource);
+    }
+
+    protected function processAllResultSet($response)
+    {
+        return new ResultSet($this, $response, $this->resource, true);
     }
 
     protected function hydrate($response, $fresh=true)
@@ -251,7 +374,7 @@ class Builder
     }
 
 	protected function create($array)
-    {
+    {        
     	return $this->resource->fresh()->fill($array);
     }
 

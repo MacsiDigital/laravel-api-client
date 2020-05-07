@@ -1,6 +1,6 @@
 <?php
 
-namespace MacsiDigital\API\Relations;
+namespace MacsiDigital\API\Support\Relations;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -10,7 +10,7 @@ class BelongsTo extends Relation
 {
     protected $relation;
 
-    public function __construct($related, $owner, $name, $field, array $data = [])
+    public function __construct($related, $owner, $name, $field)
     {
         $this->related = new $related($owner->client);
         $this->owner = $owner;
