@@ -1,15 +1,14 @@
 <?php
 
-namespace MacsiDigital\Api\Exceptions;
+namespace MacsiDigital\API\Exceptions;
 
 use Exception;
 
-class RequestException extends Exception
+class ValidationFailedException extends Exception
 {
-    public $response;
 
-    public function __construct($errors)
+    public function __construct($error)
     {
-        parent::__construct();
+        parent::__construct('You have validation errors:- '.implode(', ', $error->all()));
     }
 }

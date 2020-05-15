@@ -4,35 +4,78 @@ namespace MacsiDigital\API\Traits;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
+use MacsiDigital\API\Relations\HasOne;
+use MacsiDigital\API\Relations\HasMany;
+use MacsiDigital\API\Relations\BelongsTo;
+use MacsiDigital\API\Relations\BelongsToMany;
 
 trait HasRelationships
 {
-    /**
-     * The loaded relationships for the model.
-     *
-     * @var array
-     */
+    
     protected $relations = [];
 
+    protected $results = [];
 
-    public function hasOne($related, $name)
+    // List of relations to load on creation
+    protected $dontAutoloadRelation = [];
+
+    protected $loadRaw = false;
+
+    protected function resolveRelationName($name) 
     {
-        
+        if($name == ''){
+            $name = debug_backtrace()[2]['function'];
+        }
+        return $name;
     }
 
-    public function belongsTo($related, $name)
+    protected function resolveRelationField($field, $name) 
     {
-        
+        if($field == ''){
+            $field = $name.'_id';
+        }
+        return $field;
     }
 
-    public function hasMany($related, $name)
+    public function hasOne($related, $name="", $field="")
     {
-        
+        $name = $this->resolveRelationName($name);
+        if(!$this->relationLoaded($name)){
+            $field = $this->resolveRelationField($field, $this->getModelName());
+            $this->setRelation($name, new HasOne($related, $this, $name, $field));
+        }
+        return $this->getRelation($name);
     }
 
-    public function belongsToMany($related, $name)
+    public function belongsTo($related, $name="")
     {
-        
+        $name = $this->resolveRelationName($name);
+        if(!$this->relationLoaded($name)){
+            $field = $this->resolveRelationField($field, $name);
+            $this->setRelation($name, new BelongsTo($related, $this, $name, $field));
+        }
+        return $this->getRelation($name);
+    }
+
+    public function hasMany($related, $name="")
+    {
+        $name = $this->resolveRelationName($name);
+        if(!$this->relationLoaded($name)){
+            $field = $this->resolveRelationField($field, $name);
+            $this->setRelation($name, new HasMany($related, $this, $name, $field));
+        }
+        return $this->getRelation($name);
+    }
+
+    public function belongsToMany($related, $name="")
+    {
+        $name = $this->resolveRelationName($name);
+        if(!$this->relationLoaded($name)){
+            $field = $this->resolveRelationField($field, $name);
+            $this->setRelation($name, new BelongsToMany($related, $this, $name, $field));
+        }
+        return $this->getRelation($name);
     }
 
     /**
@@ -130,4 +173,16 @@ trait HasRelationships
 
         return $this;
     }
+
+    public function getModelName() 
+    {
+        $segments = explode('\\', static::class);
+        return strtolower(end($segments));
+    }
+
+    public function isRelationship($key) 
+    {
+        return method_exists($this, $key);
+    }
+
 }
