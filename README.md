@@ -10,13 +10,19 @@ You can install the package via composer:
 composer require macsidigital/laravel-api-client
 ```
 
+## Versions
+
+1.0 - Laravel 5.5 - 6 - not maintained but there for backward compatibility, if there are any issues then create a pull request.
+
+2.0 - Laravel 7.0 - Maintanined, again feel free to create pull requests.  This is open source which is a 2 way street.
+
 ## Usage
 
 The main aim of this library is to add a common set of traits to models to be able to create, update, retrieve and delete records when accessing API's.  Obviously all API's are different so you should check documentation on how best to implement with these traits.
 
 The basic concept is you build a client in the API library that you create which extends on the models in this library.
 
-There are some authentication models included but its pretty simple to roll your own, Thanks to Taylor Otwell we now extend the new Laravel HTTP\Client library.
+There are some authentication models included but its pretty simple to roll your own, Thanks to Taylor Otwell we now extend the new Laravel HTTP\Client library and hook into some of the support Models / Traits.
 
 ### Changelog
 
