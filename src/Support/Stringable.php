@@ -1,6 +1,6 @@
 <?php
 
-namespace Illuminate\Support;
+namespace MacsiDigital\API\Support;
 
 use Closure;
 use Illuminate\Support\Traits\Macroable;
