@@ -20,7 +20,7 @@
         "guzzlehttp/guzzle": "~6.0|~5.0|~4.0",
         "firebase/php-jwt": "^5.0",
         "illuminate/support": "^5.5|^6.0",
-        "macsidigital/laravel-oauth2-client": "v1.x-dev"
+        "macsidigital/laravel-oauth2-client": "^1.0"
     },
     "require-dev": {
         "mockery/mockery": "^1.0|^1.3",
