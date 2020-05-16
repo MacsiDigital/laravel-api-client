@@ -17,7 +17,7 @@ class PendingRequest
     /**
      * The factory instance.
      *
-     * @var \Illuminate\Http\Client\Factory|null
+     * @var \MacsiDigital\API\Support\Factory|null
      */
     protected $factory;
 
@@ -94,7 +94,7 @@ class PendingRequest
     /**
      * Create a new HTTP Client instance.
      *
-     * @param  \Illuminate\Http\Client\Factory|null  $factory
+     * @param  \MacsiDigital\API\Support\Factory|null  $factory
      * @return void
      */
     public function __construct(Factory $factory = null)
@@ -379,7 +379,7 @@ class PendingRequest
      *
      * @param  string  $url
      * @param  array|string|null  $query
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      */
     public function get(string $url, $query = null)
     {
@@ -393,7 +393,7 @@ class PendingRequest
      *
      * @param  string  $url
      * @param  array|string|null  $query
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      */
     public function head(string $url, $query = null)
     {
@@ -407,7 +407,7 @@ class PendingRequest
      *
      * @param  string  $url
      * @param  array  $data
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      */
     public function post(string $url, array $data = [])
     {
@@ -421,7 +421,7 @@ class PendingRequest
      *
      * @param  string  $url
      * @param  array  $data
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      */
     public function patch($url, $data = [])
     {
@@ -435,7 +435,7 @@ class PendingRequest
      *
      * @param  string  $url
      * @param  array  $data
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      */
     public function put($url, $data = [])
     {
@@ -449,7 +449,7 @@ class PendingRequest
      *
      * @param  string  $url
      * @param  array  $data
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      */
     public function delete($url, $data = [])
     {
@@ -464,7 +464,7 @@ class PendingRequest
      * @param  string  $method
      * @param  string  $url
      * @param  array  $options
-     * @return \Illuminate\Http\Client\Response
+     * @return \MacsiDigital\API\Support\Response
      *
      * @throws \Exception
      */
@@ -486,10 +486,10 @@ class PendingRequest
 
         return retry($this->tries ?? 1, function () use ($method, $url, $options) {
             try {
-                $laravelData = $this->parseRequestData($method, $url, $options);
+                $apiData = $this->parseRequestData($method, $url, $options);
 
                 return tap(new Response($this->buildClient()->request($method, $url, $this->mergeOptions([
-                    'laravel_data' => $laravelData,
+                    'api_data' => $apiData,
                     'on_stats' => function ($transferStats) {
                         $this->transferStats = $transferStats;
                     },
@@ -530,21 +530,21 @@ class PendingRequest
      */
     protected function parseRequestData($method, $url, array $options)
     {
-        $laravelData = $options[$this->bodyFormat] ?? $options['query'] ?? [];
+        $apiData = $options[$this->bodyFormat] ?? $options['query'] ?? [];
 
-        $urlString = Str::of($url);
+        $urlString = new Stringable($url);
 
-        if (empty($laravelData) && $method === 'GET' && $urlString->contains('?')) {
-            $laravelData = (string) $urlString->after('?');
+        if (empty($apiData) && $method === 'GET' && $urlString->contains('?')) {
+            $apiData = (string) $urlString->after('?');
         }
 
-        if (is_string($laravelData)) {
-            parse_str($laravelData, $parsedData);
+        if (is_string($apiData)) {
+            parse_str($apiData, $parsedData);
 
-            $laravelData = is_array($parsedData) ? $parsedData : [];
+            $apiData = is_array($parsedData) ? $parsedData : [];
         }
 
-        return $laravelData;
+        return $apiData;
     }
 
     /**
@@ -601,7 +601,7 @@ class PendingRequest
 
                 return $promise->then(function ($response) use ($request, $options) {
                     optional($this->factory)->recordRequestResponsePair(
-                        (new Request($request))->withData($options['laravel_data']),
+                        (new Request($request))->withData($options['api_data']),
                         new Response($response)
                     );
 
@@ -622,7 +622,7 @@ class PendingRequest
             return function ($request, $options) use ($handler) {
                 $response = ($this->stubCallbacks ?? collect())
                      ->map
-                     ->__invoke((new Request($request))->withData($options['laravel_data']), $options)
+                     ->__invoke((new Request($request))->withData($options['api_data']), $options)
                      ->filter()
                      ->first();
 
@@ -648,7 +648,7 @@ class PendingRequest
     {
         return tap($request, function ($request) use ($options) {
             $this->beforeSendingCallbacks->each->__invoke(
-                (new Request($request))->withData($options['laravel_data']),
+                (new Request($request))->withData($options['api_data']),
                 $options
             );
         });
