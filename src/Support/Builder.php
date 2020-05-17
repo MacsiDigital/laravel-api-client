@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use MacsiDigital\API\Dev\Api;
 use Illuminate\Support\Collection;
 use MacsiDigital\API\Support\ResultSet;
+use MacsiDigital\API\Exceptions\HttpException;
 
 class Builder
 {
@@ -68,27 +69,27 @@ class Builder
         return $this->allowedOperands;
     }
 
-    protected function getOperandFunction($operand)
+    protected function getOperandTranslation($operand)
     {
         switch ($operand) {
             case '=':
-                return 'ProcessEquals';
+                return 'Equals';
             case '!=':
-                return 'ProcessNotEquals';
+                return 'NotEquals';
             case '>':
-                return 'ProcessGreaterThan';
+                return 'GreaterThan';
             case '>=':
-                return 'ProcessGreaterThanOrEquals';
+                return 'GreaterThanOrEquals';
             case '<':
-                return 'ProcessLessThan';
+                return 'LessThan';
             case '<=':
-                return 'ProcessLessThanOrEquals';
+                return 'LessThanOrEquals';
             case '<>':
-                return 'ProcessGreaterThanOrLessThan';
+                return 'GreaterThanOrLessThan';
             case 'like':
-                return 'ProcessContains';
+                return 'Contains';
             default:
-                return 'Process'.Str::studly($operand);
+                return Str::studly($operand);
         }
     }
 
@@ -132,7 +133,7 @@ class Builder
         return $this;
     }
 
-    protected function retreiveEndPoint($type="index")
+    protected function retreiveEndPoint($type="get")
     {
         return $this->resource->getEndPoint($type);
     }
@@ -150,50 +151,44 @@ class Builder
             }
             return $this->whereIn($id, $column);
         }
-        $response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
+        $response = $this->request->get($this->retreiveEndPoint('get').'/'.$id, $this->combineQueries());
+        if($this->raw){
+            return $response;
+        }
         if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
             return $this->hydrate($response);
         } else if($response->getStatusCode() == 404) {
-            if($this->raw){
-                return $response;
-            }
             return null;
         } else {
-            return $response;
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
     public function findOrFail($id) 
     {
-        $response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
+        $response = $this->request->get($this->retreiveEndPoint('get').'/'.$id, $this->combineQueries());
+        if($this->raw){
+            return $response;
+        }
         if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
             return $this->hydrate($response);
         } else if($response->getStatusCode() == 404) {
-            if($this->raw){
-                return $response;
-            }
             return $response->throw();
         } else {
-            return $response;
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
     public function all() 
     {
-        $response = $this->request->get($this->retreiveEndPoint('index'), $this->addPagination($this->combineQueries()));
+        $response = $this->request->get($this->retreiveEndPoint('get'), $this->addPagination($this->combineQueries()));
+        if($this->raw){
+            return $response;
+        }
         if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
             return $this->processAllResultSet($response);
         } else {
-            return $response;
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
@@ -202,68 +197,66 @@ class Builder
         if($this->data != null){
             return $this->data;
         }
-        $response = $this->request->get($this->retreiveEndPoint(), $this->addPagination($this->combineQueries()));
+        $response = $this->request->get($this->retreiveEndPoint('get'), $this->addPagination($this->combineQueries()));
+        if($this->raw){
+            return $response;
+        }
         if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
             return $this->data = $this->processResultSet($response);
         } else {
-            return $response;
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
     public function post($attributes)
     {
-        $response = $this->request->post($this->retreiveEndPoint('create'), $attributes, $this->combineQueries());
+        $response = $this->request->post($this->retreiveEndPoint('post'), $attributes, $this->combineQueries());
+        if($this->raw){
+            return $response;
+        }
         if($response->successful()){
-            if($this->raw){
-                return $response;
-            }
             return $this->hydrate($response, false);
         } else {
-            if($this->raw){
-                return $response;
-            }
-            return $this->update(['status_code' => $response->status(), 'response' => $response]);
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
     public function patch($attributes)
     {
-        $response = $this->request->patch($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
+        $response = $this->request->patch($this->retreiveEndPoint('patch'), $attributes, $this->combineQueries());
+        if($this->raw){
+            return $response;
+        }
         if($response->successful()){
-            if($this->raw){
-                return $response;
-            }
-            return $this->hydrate($response, false);
+            return $this->hydrate($response);
         } else {
-            if($this->raw){
-                return $response;
-            }
-            return $this->update(['status_code' => $response->status(), 'response' => $response]);
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
     public function put($attributes)
     {
-        $response = $this->request->put($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
+        $response = $this->request->put($this->retreiveEndPoint('put'), $attributes, $this->combineQueries());
+        if($this->raw){
+            return $response;
+        }
         if($response->successful()){
-            if($this->raw){
-                return $response;
-            }
-            return $this->hydrate($response, false);
+            return $this->hydrate($response);
         } else {
-            if($this->raw){
-                return $response;
-            }
-            return $this->update(['status_code' => $response->status(), 'response' => $response]);
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
     public function delete() 
     {
-        return $this->request->delete($this->retreiveEndPoint('delete'), $this->combineQueries());
+        $response = $this->request->delete($this->retreiveEndPoint('delete'), $this->combineQueries());
+        if($this->raw){
+            return $response;
+        }
+        if($response->failed()){
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
+        }
+        return true;
     }
 
     public function first()
@@ -303,8 +296,49 @@ class Builder
 
     protected function addWhere($column, $operand, $value){
         if($this->operandAllowed($operand)){
-            $this->wheres[$column] = ['operand' => $operand, 'value' => $value];
+            $function = 'addWhere'.$this->getOperandTranslation($operand);
+            $this->$function($column, $operand, $value);
         }
+    }
+
+    protected function addWhereEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereNotEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereGreaterThan($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereGreaterThanOrEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereLessThan($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereLessThanOrEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereGreaterThanOrLessThan($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereContains($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
     }
 
     public function whereIn(array $values, $column="") 
@@ -398,16 +432,51 @@ class Builder
 
     protected function processWheres()
     {
-        foreach($this->wheres as $column => $detail){
-            $function = $this->getOperandFunction($detail['operand']);
-            $this->$function($column, $detail['value']);
+        foreach($this->wheres as $detail){
+            $function = 'ProcessWhere'.$this->getOperandTranslation($detail['operand']);
+            $this->$function($detail);
         }
         return $this;
     }
 
-    public function processEquals($column, $value) 
+    public function processWhereEquals($detail) 
     {
-        $this->processedWheres[$column] = $value;
+        $this->processedWheres[$detail['column']] = $detail['value'];
+    }
+
+    public function processWhereNotEquals($detail) 
+    {
+        $this->processedWheres[$detail['column']] = '-'.$detail['value'];
+    }
+
+    protected function processWhereGreaterThan($detail)
+    {
+        $this->processedWheres[$detail['column']] = '>'.$detail['value'];
+    }
+
+    protected function processWhereGreaterThanOrEquals($detail)
+    {
+        $this->processedWheres[$detail['column']] = '>='.$detail['value'];
+    }
+
+    protected function processWhereLessThan($detail)
+    {
+        $this->processedWheres[$detail['column']] = '<'.$detail['value'];
+    }
+
+    protected function processWhereLessThanOrEquals($detail)
+    {
+        $this->processedWheres[$detail['column']] = '<='.$detail['value'];
+    }
+
+    protected function processWhereGreaterThanOrLessThan($detail)
+    {
+        $this->processedWheres[$detail['column']] = '<>'.$detail['value'];
+    }
+
+    protected function processWhereContains($detail)
+    {
+        $this->processedWheres[$detail['column']] = '%'.$detail['value'].'%';
     }
 
     protected function processOrders()
@@ -479,23 +548,14 @@ class Builder
         return new ResultSet($this, $response, $this->resource, true);
     }
 
-    protected function hydrate($response, $fresh=true)
+    protected function hydrate($response)
     {
-        if($fresh){
-            return $this->create($response->json()[$this->getApiDataField()]);
-        } else {
-            return $this->update($response->json()[$this->getApiDataField()]);
-        }
+        return $this->resource->newFromBuilder($response->json()[$this->getApiDataField()]);
     }
 
-    protected function create($array)
-    {        
-        return $this->resource->fresh()->fill($array);
-    }
-
-    protected function update($array)
+    public function prepareHttpErrorMessage($response)
     {
-        return $this->resource->fill($array);
+        return $response->json()['message'];
     }
 
 }

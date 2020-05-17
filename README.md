@@ -102,6 +102,80 @@ There is also a function in the entry class that returns the builder class to us
     }
 ```
 
+## RESTful API by default
+
+We by default use standard RESTful method calls:-
+
+get - retreive record(s)
+post - create a record
+patch - update a record
+put - replace a record
+delete - delete a record
+
+However some API's have different ideas on what methods to call (we are looking at you Xero).
+
+So you override the default methods by adding these attributes or methods to your models
+
+```php
+	protected $createMethod = 'post';
+
+    protected $updateMethod = 'patch';
+
+	public function getUpdateMethod()
+    {
+        return $this->updateMethod;
+    }
+
+    public function getCreateMethod()
+    {
+        return $this->createMethod;
+    }
+```
+
+Also some implementations, looking at you again Xero, use update methods to create models and create methods for updating models, so you will need to override the end point functions in the resource model. Xero uses a patch request for creating models and post request for updating models.
+
+```php
+	//Normal
+	public function getPostEndPoint() 
+    {
+        return $this->endPoint;
+    }
+
+    public function getPutEndPoint() 
+    {
+        return $this->endPoint.'/'.$this->getKey();
+    }
+
+    //Xero
+	public function getPostEndPoint() 
+    {
+        return $this->endPoint.'/'.$this->getKey();
+    }
+
+    public function getPutEndPoint() 
+    {
+        return $this->endPoint;
+    }
+```
+
+## Retreiving models
+
+You can retrieve a single model by either using the find method and passing an ID, or an array of ID's, or by running a query and returning first();
+
+```php
+	$user = API::user()->find('ID');
+
+	$user = API::user()->where('Name', 'Bob')->first();
+```
+
+You can also use get and all to retreive many models, this will return a Result Set, which is an enhanced Laravel Collection.
+
+```php
+	$users = API::account()->all();
+
+	$users = API::account()->where('Type', 'Admin')->get();
+```
+
 ## Result Sets
 
 After we run a multi result return type like all() and get(), we are returned a result set.  This takes care of any pagination and can be used to dip back into the Gateway to retreive the next lot of results, houses information on what page we navigated, whats teh next page etc.  This is dependant on API and we try to utilise the API's returned meta where possible.
@@ -122,6 +196,34 @@ We use get just like laravel, when we need to filter, order or paginate.
 
 At present there is no facility to use predefined links but it is something we may add in the future.
 
+## Raw Searches
+
+If you would like to receive the raw response from the query then set raw on the query
+
+```php
+	$users = API::account()->raw()->all();
+
+	$users = API::account()->where('Type', 'Admin')->raw()->get();
+```
+
+## Http Errors
+
+If there are any errors returned from our call and the response is not set to raw then we will throw a new Http Exception.  We have some default behaviour but different API's have different responses to errors.  So you can override the prepareHttpErrorMessage() method on the builder model to customise the Exception message.
+
+```php
+	$json = $response->json();
+	if($json['Type'] == 'ValidationException'){
+		$message = $json['Message'];
+		foreach($json['Elements'][0]['ValidationErrors'] as $error){
+			$message .= ' : '.$error['Message'];
+		}
+    	return $message;
+	} else {
+    	return $json['Message'];
+	}
+```
+
+
 ## Models
 
 We have 2 base model types, resources and apiResources
@@ -135,6 +237,49 @@ These are generally gesources that are returned as relationships of other models
 These are models that will interact directly with an API. To create one of these extent the MacsiDigital/API/Support/APIResource.
 
 If you want to roll your own then you need to ensure you add the MacsiDigital\API\Traits\InteractsWithAPI trait.  Also follow how our Support API resource works.
+
+In these models we also variosu info we store, like primary key and api endpoints, these are the available attributes
+
+```php
+	// These will map to RESTful requests
+	// index -> get and all
+	// create -> post
+	// show -> first
+	// update -> patch or put
+	// delte -> delete
+    protected $allowedMethods = ['index', 'create', 'show', 'update', 'delete'];
+
+    protected $endPoint = 'user';
+
+    protected $updateMethod = 'patch';
+
+    protected $storeResource;
+    protected $updateResource;
+
+    protected $primaryKey = 'id';
+
+    // Most API's return data in a data attribute.  However we need to override on a model basis as some like Xero return it as 'Users' or 'Invoices'
+    protected $apiDataField = 'data'; 
+```
+
+In the case of Xero we can overwrite the getApiDatField function so that we dont have to set on all models.
+
+```php
+	public function getApiDataField()
+    {
+    	// Xero uses pluralised end points like 'Users' so we can use this to pick the data from responses
+        return $this->endPoint;
+    }
+```
+
+In a similar way we can override the priamryKey as some api's will keep the ID field as UserID by creating the following function
+
+```php
+	public function getKeyName()
+    {
+        return $this->endPoint.'ID';
+    }
+```
 
 ### Relationships
 
@@ -174,130 +319,7 @@ Now that the relationships are set we can use Laravel like syntax to retrieve an
 
 Filters will vary from API to API, so we have tried to build an extendable filter functionality that can easily be implemented.
 
-First of all you need to create a Builder model that extends the Support/Builder model.
-
-In the Entry model you need to set the below function
-
-```php
-	public function getBuilderClass() 
-    {
-        return \Namespace\To\Your\Builder::class; 
-    }
-```
-
-In this builder class you would then create functions that are called when filters are applied.  We cover the basic operands
-
-```php
-	case '=':
-	    return 'ProcessEquals';
-	case '!=':
-	    return 'ProcessNotEquals';
-	case '>':
-	    return 'ProcessGreaterThan';
-	case '>=':
-	    return 'ProcessGreaterThanOrEquals';
-	case '<':
-	    return 'ProcessLessThan';
-	case '<=':
-	    return 'ProcessLessThanOrEquals';
-	case '<>':
-	    return 'ProcessGreaterThanOrLessThan';
-	case 'like':
-	    return 'ProcessContains';
-	default:
-	    return 'Process'.Str::studly($operand);
-```
-
-The final call is a default catch all, so if you called 'StartsWith' as the operand it will try to call a ProcessStartsWith method on the extended builder class.
-
-Now each API will handle filtering differently so the logic in these methods are to suit the API, here is an example for xero, who add all filters to a where query string.  They allow the main ones and have 3 custom types, 'Contains' which is the same as a 'like' call, 'StartWith' and 'EndsWith'.
-
-```php
-	public function processEquals($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'=="'.$value.'"';
-		
-	}
-
-	public function processNotEquals($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'!="'.$value.'"';
-	}
-
-	public function processGreaterThan($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'>"'.$value.'"';
-	}
-
-	public function processGreaterThanOrEquals($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'>="'.$value.'"';
-	}
-
-	public function processLessThan($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'<"'.$value.'"';
-	}
-
-	public function processLessThanOrEquals($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'<="'.$value.'"';
-	}
-
-	public function processGreaterThanOrLessThan($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'<>"'.$value.'"';
-	}
-
-	public function processContains($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'.Contains("'.$value.'")';
-	}
-
-	public function processStartsWith($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'.StartsWith("'.$value.'")';
-	}
-
-	public function processEndsWith($field, $value) 
-	{
-		if(!isset($this->processedWheres['where'])){
-			$this->processedWheres['where'] = '';
-		}
-		$this->processedWheres['where'] .= $field.'.EndsWith("'.$value.'")';
-	}
-```
-
-As we create custom filter methods, this makes filtering easy and extremely powerful, but it really does depend on what the API allows to be done.
-
-Now that the filters are in place we would use Laravel like syntax to apply with the where functions
+Filters use Laravel like syntax to apply with the where functions
 
 ```php
 	$user = API::user()->where('Name', 'John Doe')->first();
@@ -315,33 +337,198 @@ And of course you can stack where clauses
 
 At present we only cover the where and whereIn, the latter will only work with the ID field, but we intend to add more of the laravel where clauses, like whereBetween if we find there is support for this in API's.
 
+Now as noted all API's are different so generally we have to customise the filter logic.
+
+First of all you need to create a Builder model that extends the Support/Builder model.
+
+In the Entry model you need to set the below function
+
+```php
+	public function getBuilderClass() 
+    {
+        return \Namespace\To\Your\Builder::class; 
+    }
+```
+
+In this builder class you would then create functions that are called when filters are added and when they are processed into the query string. So to modify we would modify 2 methods
+
+```php
+	protected function addWhereEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    public function processWhereEquals($detail) // Passed in the array attached in above method
+    {
+        $this->processedWheres[$detail['column']] = $detail['value'];
+    }
+```
+
+As arrays cant use symbols as keys we do some translating, so it '=' is called we will change this to AddWhereEquals and processWhereEquals, the list below is of the trnslations we make.
+
+```php
+	case '=':
+	    return 'Equals';
+	case '!=':
+	    return 'NotEquals';
+	case '>':
+	    return 'GreaterThan';
+	case '>=':
+	    return 'GreaterThanOrEquals';
+	case '<':
+	    return 'LessThan';
+	case '<=':
+	    return 'LessThanOrEquals';
+	case '<>':
+	    return 'GreaterThanOrLessThan';
+	case 'like':
+	    return 'Contains';
+	default:
+	    return 'Process'.Str::studly($operand);
+```
+
+The default is called for any custom filters, so lets say you call where('name', 'StartsWith', 'Bob') this will call addWhereStartsWith and processWhereStartsWith methods
+
+Now each API will handle filtering differently so the logic in these methods are to suit the API, here is an example for xero, who add all filters to a where query string.  They allow the main ones and have 3 custom types, 'Contains' which is the same as a 'like' call, 'StartWith' and 'EndsWith'.
+
+```php
+	public function processEquals($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'=="'.$detail['value'].'"';
+		
+	}
+
+	public function processNotEquals($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'!="'.$detail['value'].'"';
+	}
+
+	public function processGreaterThan($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'>"'.$detail['value'].'"';
+	}
+
+	public function processGreaterThanOrEquals($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'>="'.$detail['value'].'"';
+	}
+
+	public function processLessThan($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'<"'.$detail['value'].'"';
+	}
+
+	public function processLessThanOrEquals($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'<="'.$detail['value'].'"';
+	}
+
+	public function processGreaterThanOrLessThan($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'<>"'.$detail['value'].'"';
+	}
+
+	public function processContains($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'.Contains("'.$detail['value'].'")';
+	}
+
+	public function processStartsWith($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'.StartsWith("'.$detail['value'].'")';
+	}
+
+	public function processEndsWith($detail) 
+	{
+		if(!isset($this->processedWheres['where'])){
+			$this->processedWheres['where'] = '';
+		}
+		$this->processedWheres['where'] .= $detail['column'].'.EndsWith("'.$detail['value'].'")';
+	}
+```
+
+As we create custom filter methods, this makes filtering easy and extremely powerful, but it really does depend on what the API allows to be done.
+
+So as an example in Xero we can apply a If-Modified-Since header to our request to retrive only models modified since a specific date, this can be achieved like so.
+
+```php
+	// you would need to spoof the column name, as its not used but is still required. 
+	// So call something like
+	$user->where('UpdatedDate', 'ModifiedAfter', $date)->get();
+
+	public function addWhereModifiedAfter($column, $operand, $value) 
+	{
+		$this->wheres[] = ['operand' => $operand, 'value' => $value];
+	}
+
+	public function processWhereModifiedAfter($detail) 
+	{
+		$this->request->withHeader([
+			'If-Modified-Since' => $detail['value']
+		]);
+	}
+```
+
+Of course for these sorts of custom actions we have to update the allowed operands field within our Entry model to allow them to be apllied.
+
+```php
+	protected $allowedOperands = ['=', '!=', '<', '>', '<=', '>=', '<>', 'like', 'ModifiedAfter'];
+```
+
 ## Creating and Updating
 
-Generally in API's the attributes required for saving and updating are different, and they are in turn differnet to the records when a model is retreived.  We therefore utilist 'Persistance' models which will house validation logic and teh fields required to make a successful save.  So in our models we need to Extend the InteractsWithAPI trait and add the following 2 protected attributes.
+Generally in API's the attributes required for saving and updating are different, and they are in turn differnet to the attributes when a model is retreived.  We therefore utilise 'Persistance' models which will house validation logic and the attributes required to make a successful save.  So in our models we need to Extend the InteractsWithAPI trait and add the following 2 protected attributes.
 
 ```php
 	protected $storeResource = 'MacsiDigital\API\Dev\Resources\StoreAddress';
     protected $updateResource = 'MacsiDigital\API\Dev\Resources\UpdateAddress';
 ```
 
-The Store and Update resources should extend the MacsiDigital/API/Support/PersistResource.  These models will have 2 $attributes for validation, what fields are required for updating.
+The Store and Update resources should extend the MacsiDigital/API/Support/PersistResource.  These models will have $attributes for what fields to use and any validation.
 
 ```php
 	protected $persistAttributes = [
-    	'name' => 'string|max:255',
-    	'email' => 'email|string|max:255',
-    	'password' => 'string|max:10',
+    	'name' => 'required|string|max:255',
+    	'email' => 'required|email|string|max:255',
+    	'password' => 'required|string|max:10',
     ];
 ```
-As you can see we set the field and any regular Laravel validation logic in the persistAttribute.
+As you can see we set the field and any regular Laravel validation logic in the persistAttribute, if there is no validion we can pass ''.
 
 We can also extend this to include relationships.  It may look like so:-
 
 ```php
 	protected $persistAttributes = [
-    	'name' => 'string|max:255',
-    	'email' => 'email|string|max:255',
-    	'password' => 'string|max:10',
+    	'name' => 'required|string|max:255',
+    	'email' => 'required|email|string|max:255',
+    	'password' => 'required|string|max:10',
     ];
 
     protected $relatedResource = [
@@ -366,12 +553,12 @@ We can also require custom fields from relationships by using dot notation and n
 
 ```php
 	protected $persistAttributes = [
-    	'name' => 'string|max:255',
-    	'email' => 'email|string|max:255',
-    	'password' => 'string|max:10',
-    	'address.street' => 'string|max:255',
-    	'address.town' => 'string|max:255',
-    	'address.postcode' => 'string|max:10',
+    	'name' => 'required|string|max:255',
+    	'email' => 'required|email|string|max:255',
+    	'password' => 'required|string|max:10',
+    	'address.street' => 'required|string|max:255',
+    	'address.town' => 'required|string|max:255',
+    	'address.postcode' => 'required|string|max:10',
     ];
 ```
 
@@ -384,12 +571,13 @@ To save its as simple as calling the save() function.
 ```php
 	$user->save();
 ```
+THe model will see if it already exists and call the correct update method.  If updating we will only pass dirty attributes to the persistance model.
 
-You can also utilise other laravel methods like make, create and update
+You can also utilise other laravel methods like make, create and update directly in the model.
 
 ## Deleting
 
-To delete we would just call the delete function.
+To delete we would just call the delete function, this will return true if it deleted or throw a HttpException if there was an error.
 
 ```php
 	$user->delete();

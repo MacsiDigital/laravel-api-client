@@ -112,7 +112,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 			return $this;
 		} else{
 			foreach($array[$this->resource->getApiDataField()] as $object){
-				$this->items->push($this->resource->fresh()->fill($object));
+				$this->items->push($this->resource->newFromBuilder($object));
 				$this->incrementTotalDownloads();
 			}
 		}

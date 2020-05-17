@@ -50,7 +50,7 @@ abstract class Entry implements EntryContract
     protected $resultsTotalRecordsField = 'meta.total';
 
     // What operands are allowed when filtering
-    protected $allowedOperands = ['='];
+    protected $allowedOperands = ['=', '!=', '<', '>', '<=', '>=', '<>', 'like'];
     protected $defaultOperand = '=';
 
     public static function __callStatic($method, $parameters)
