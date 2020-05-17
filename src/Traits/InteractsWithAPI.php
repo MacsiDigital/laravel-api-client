@@ -26,14 +26,15 @@ trait InteractsWithAPI
 
     protected $apiDataField = 'data';
 
-    public static function query($resource)
+    public function query()
     {
-        return new Builder($resource);
+        $class = $this->client->getBuilderClass();
+        return new $class($this);
     }
 
     public function newQuery() 
     {
-        return self::query($this);
+        return $this->query($this);
     }
 
     public function getApiDataField()

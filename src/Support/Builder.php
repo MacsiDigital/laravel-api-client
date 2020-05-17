@@ -12,6 +12,8 @@ class Builder
     protected $resource;
     protected $request;
     protected $queries = [];
+    protected $wheres = [];
+    protected $processedWheres = [];
     protected $orders = [];
     protected $limit = null;
     protected $offset = null;
@@ -28,6 +30,9 @@ class Builder
     protected $maxPerPage = '';
     protected $minPerPage = '';
 
+    protected $allowedOperands;
+    protected $defaultOperand;
+
 
     public function __construct($resource)
     {
@@ -41,12 +46,66 @@ class Builder
         $this->setPerPageField($resource->client->getPerPageField());
         $this->setPageField($resource->client->getPageField());
         $this->raw($resource->client->getRaw());
-        $this->paginate($resource->client->getPagination());
+        $this->setPaginate($resource->client->getPagination());
         if($this->shouldPaginate()){
-            $this->setPerPage($resource->client->getDefaultPaginationRecords());
+            $this->paginate($resource->client->getDefaultPaginationRecords());
         }
         $this->setMaxPerPage($resource->client->getMaxPaginationRecords());
         $this->setMinPerPage($resource->client->getMinPaginationRecords());
+
+        $this->setAllowedOperands($resource->client->getAllowedOperands());
+        $this->setDefaultOperand($resource->client->getDefaultOperand());
+    }
+
+    protected function setAllowedOperands(array $array)
+    {
+        $this->allowedOperands = $array;
+        return $this;
+    }
+
+    protected function getAllowedOperands()
+    {
+        return $this->allowedOperands;
+    }
+
+    protected function getOperandFunction($operand)
+    {
+        switch ($operand) {
+            case '=':
+                return 'ProcessEquals';
+            case '!=':
+                return 'ProcessNotEquals';
+            case '>':
+                return 'ProcessGreaterThan';
+            case '>=':
+                return 'ProcessGreaterThanOrEquals';
+            case '<':
+                return 'ProcessLessThan';
+            case '<=':
+                return 'ProcessLessThanOrEquals';
+            case '<>':
+                return 'ProcessGreaterThanOrLessThan';
+            case 'like':
+                return 'ProcessContains';
+            default:
+                return 'Process'.Str::studly($operand);
+        }
+    }
+
+    protected function operandAllowed($operand)
+    {
+        return in_array($operand, $this->getAllowedOperands());
+    }
+
+    protected function getDefaultOperand()
+    {
+        return $this->defaultOperand;
+    }
+
+    protected function setDefaultOperand($default)
+    {
+        $this->defaultOperand = $default;
+        return $this;
     }
 
     protected function setPerPageField($field)
@@ -217,21 +276,41 @@ class Builder
         $this->where($column, $value);
         return $this->first();
     }
+
+    public function query($column, $value) 
+    {
+        $this->queries[$column] = $value;
+    }
     
-    public function where($column, $value)
+    public function where($column, $operand = null, $value = null)
     {
         if($this->data != null){
             $this->data = null;
         }
-        $this->queries[$column] = $value;
-
+        if(is_array($column)){
+            foreach($column as $query){
+                $this->where(...$query);
+            }
+        } else {
+            if($value == null){
+                $value = $operand;
+                $operand = $this->getDefaultOperand();
+            }
+            $this->addWhere($column, $operand, $value);
+        }
         return $this;
+    }
+
+    protected function addWhere($column, $operand, $value){
+        if($this->operandAllowed($operand)){
+            $this->wheres[$column] = ['operand' => $operand, 'value' => $value];
+        }
     }
 
     public function whereIn(array $values, $column="") 
     {
         $string = implode(',', $values);
-        return $this->where($column, $string)->get();
+        return $this->queries($column, $string)->get();
     }
 
     public function orderBy($value, $column='order') 
@@ -250,7 +329,7 @@ class Builder
         return $this->data->count();
     }
 
-    public function paginate($status=true) 
+    public function setPaginate($status=true) 
     {
         $this->paginate = $status;
         return $this;
@@ -271,9 +350,18 @@ class Builder
         return $this->perPage;
     }
 
+    public function paginate($perPage, $page = null)
+    {
+        $this->setPaginate(true);
+        $this->setPerPage($perPage);
+        if($page != null){
+            $this->setPage($page);
+        }
+        return $this;
+    }
+
     public function setPerPage($perPage)
     {
-
         $this->perPage = $perPage;
 
         return $this;
@@ -297,9 +385,34 @@ class Builder
         return $this->raw;
     }
 
-    public function combineQueries() 
+    protected function combineQueries() 
     {
-        return array_merge($this->queries, $this->orders);
+        return array_merge($this->processQueries(), $this->processOrders());
+    }
+
+    protected function processQueries()
+    {
+        $this->processWheres();
+        return array_merge($this->queries, $this->processedWheres);
+    }
+
+    protected function processWheres()
+    {
+        foreach($this->wheres as $column => $detail){
+            $function = $this->getOperandFunction($detail['operand']);
+            $this->$function($column, $detail['value']);
+        }
+        return $this;
+    }
+
+    public function processEquals($column, $value) 
+    {
+        $this->processedWheres[$column] = $value;
+    }
+
+    protected function processOrders()
+    {
+        return $this->orders;
     }
 
     public function addPagination($array) 
@@ -344,6 +457,8 @@ class Builder
     public function resetQueries()
     {
         $this->queries = [];
+        $this->wheres = [];
+        $this->processedWheres = [];
         $this->resetData();
         return $this;
     }

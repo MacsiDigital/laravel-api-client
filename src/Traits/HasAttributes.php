@@ -40,12 +40,12 @@ trait HasAttributes
         return $this->dates;
     }
 
-    /**
+     /**
      * Set a given attribute on the model.
      *
      * @param  string  $key
      * @param  mixed  $value
-     * @return mixed
+     * @return $this
      */
     public function setAttribute($key, $value)
     {
@@ -59,7 +59,9 @@ trait HasAttributes
         // which simply lets the developers tweak the attribute as it is set on
         // the model, such as "json_encoding" an listing of data for storage.
         if ($this->hasSetMutator($key)) {
-            return $this->setMutatedAttributeValue($key, $value);
+            $method = 'set'.Str::studly($key).'Attribute';
+
+            return $this->{$method}($value);
         }
 
         // If an attribute is listed as a "date", we'll convert it from a DateTime
@@ -67,12 +69,6 @@ trait HasAttributes
         // the connection grammar's date format. We will auto set the values.
         elseif ($value && $this->isDateAttribute($key)) {
             $value = $this->fromDateTime($value);
-        }
-
-        if ($this->isClassCastable($key)) {
-            $this->setClassCastableAttribute($key, $value);
-
-            return $this;
         }
 
         if ($this->isJsonCastable($key) && ! is_null($value)) {
@@ -128,13 +124,12 @@ trait HasAttributes
         if (! $key) {
             return;
         }
-        
+
         // If the attribute exists in the attribute array or has a "get" mutator we will
         // get the attribute's value. Otherwise, we will proceed as if the developers
         // are asking for a relationship's value. This covers both types of values.
-        if (array_key_exists($key, $this->getAttributes()) ||
-            $this->hasGetMutator($key) ||
-            $this->isClassCastable($key)) {
+        if (array_key_exists($key, $this->attributes) ||
+            $this->hasGetMutator($key)) {
             return $this->getAttributeValue($key);
         }
 
@@ -144,7 +139,7 @@ trait HasAttributes
         if (method_exists(self::class, $key)) {
             return;
         }
-        // We still need to keep this method as the array key will not exist when relationship loaded
+
         return $this->getRelationValue($key);
     }
 
