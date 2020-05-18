@@ -260,10 +260,8 @@ trait HasAttributes
                 '%s::%s must return a relationship instance.', static::class, $method
             ));
         }
-
-        $this->setRelation($method, $relation);
-
-        $relation->getResults();
+        
+        return $relation->getResults();
     }
 
     /**
