@@ -1,6 +1,6 @@
 # Laravel package for Building API Client's
 
-A little API Client Builder Library
+An API Client Builder Library
 
 ## Installation
 
@@ -106,11 +106,11 @@ There is also a function in the entry class that returns the builder class to us
 
 We by default use standard RESTful method calls:-
 
-get - retreive record(s)
-post - create a record
-patch - update a record
-put - replace a record
-delete - delete a record
+- get - retreive record(s)
+- post - create a record
+- patch - update a record
+- put - replace a record
+- delete - delete a record
 
 However some API's have different ideas on what methods to call (we are looking at you Xero).
 
@@ -283,7 +283,21 @@ In a similar way we can override the priamryKey as some api's will keep the ID f
 
 ### Relationships
 
-We have tried to get the models as close to a Laravel model as we can, even dwn to how relationships work.  So if there is a User Model which has a relationship with an Address Model you would st it like so:-
+We have tried to get the models as close to a Laravel model as we can, even down to how relationships work.  
+
+By default we will try to create relationship objects for any returned input if they are setup. However you can override this behaviour by setting LoadRaw to true in the model
+
+```php
+	protected $loadRaw = false;
+```
+
+There may be times where you want some autoloading but not allow, in this case you can set any models that should not autoload by setting them like so:-
+
+```php
+	protected $dontAutoloadRelation = ['Address'];
+```
+
+For each model we need to create a function, just like Laravel, so if there is a User Model which has a relationship with an Address Model you would set:-
 
 ```php
 	public function address() 
@@ -300,6 +314,20 @@ This could also be a HasMany relationship and the reverse on the address would b
     	return $this->belongsTo(User::class);
     }
 ```
+
+A name and a field can be passed as a 2nd and 3rd argument.
+
+We try to automatically work out the name and field attributes if not passed for you based on the function name, so we will look for a field 'user_id' in teh array 'users' in the above method. However not all API's use the same id naming so you can set the IDSuffix by adding this to your model.
+
+```php
+	protected $IdSuffix = 'ID';
+
+	// Will now look for userID
+```
+
+Its worth pointing out that this is case sensitive so User and user will give different results, UserID and userID.  Again this is due to all API's being different.
+
+Its also worth pointing out that some resources dont interact directly with the API, in these cases the field is ignored.
 
 At present we do not have the ability for Many to Many but will see if there is a need in our API building quests.
 
@@ -593,12 +621,17 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ### Security
 
-If you discover any security related issues, please email colin@macsi.co.uk instead of using the issue tracker.
+If you discover any security related issues, please email security@macsi.co.uk instead of using the issue tracker.
 
 ## Credits
 
-- [Colin Hall](https://github.com/macsidigital)
+- [MacsiDigital](https://github.com/macsidigital)
+- [ColinHall](https://github.com/colinhall17)
 - [All Contributors](../../contributors)
+
+We use a lot of Laravel type functions taken directly from Laravel, or taken and modified so we also have to credit the Laravel team.
+
+- [Laravel](https://github.com/laravel)
 
 ## License
 

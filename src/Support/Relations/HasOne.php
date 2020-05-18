@@ -1,6 +1,6 @@
 <?php
 
-namespace MacsiDigital\API\Relations;
+namespace MacsiDigital\API\Support\Relations;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -17,6 +17,9 @@ class HasOne extends Relation
         if(array_key_exists($name, $owner->getAttributes())){
             $this->hydrate($owner->getAttributes()[$name]);
             unset($owner->$name);
+        } elseif(array_key_exists(Str::studly($name), $owner->getAttributes())){
+            $this->hydrate($owner->getAttributes()[Str::studly($name)]);
+            unset($owner->{Str::studly($name)});
         }
         $this->owner = $owner;
         $this->name = $name;
@@ -26,15 +29,10 @@ class HasOne extends Relation
     protected function hydrate($data) 
     {
     	if($data != []){
-    		$this->relation = $this->fill($data);
+    		$this->relation = $this->related->newFromBuilder($data);
     	} else {
-    		$this->relation = $this->related->fresh();
+    		$this->relation = $this->related->newInstance();
     	} 
-    }
-
-    public function fill(array $data)
-    {
-    	return $this->related->fresh()->fill($data);
     }
 
     public function getResults()

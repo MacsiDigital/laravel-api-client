@@ -1,6 +1,6 @@
 <?php
 
-namespace MacsiDigital\API\Relations;
+namespace MacsiDigital\API\Support\Relations;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -12,20 +12,20 @@ class BelongsTo extends Relation
 
     public function __construct($related, $owner, $name, $field, array $data = [])
     {
+        $this->relatedClass = $related;
         $this->related = new $related($owner->client);
         $this->owner = $owner;
         $this->name = $name;
         $this->field = $field;
-        $this->hydrate($data);
     }
 
     protected function hydrate($data) 
     {
-    	if($data != []){
-    		$this->relation = $this->fill($data);
-    	} else {
-    		$this->relation = $this->related->fresh();
-    	} 
+        if($data != []){
+            $this->relation = $this->related->newFromBuilder($data);
+        } else {
+            $this->relation = $this->related->newInstance();
+        } 
     }
 
     public function getResults()

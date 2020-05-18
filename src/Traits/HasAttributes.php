@@ -117,9 +117,11 @@ trait HasAttributes
     public function setAttribute($key, $value)
     {
         if(is_array($value) || is_object($value)){
-            if($this->relationLoaded($key)){
-                $this->updateRelationAttribute($key, $value);
-                return $this;
+            if(method_exists($this, 'setRelation')){
+                if($this->relationLoaded($key)){
+                    $this->updateRelationAttribute($key, $value);
+                    return $this;
+                }    
             }
         }
         // First we will check for the presence of a mutator for the set operation
@@ -151,7 +153,7 @@ trait HasAttributes
 
         $this->attributes[$key] = $value;
 
-        if(is_array($value)){
+        if(is_array($value) && method_exists($this, 'setRelation')){
             $this->setRelationAttribute($key, $value);
         }
 
@@ -207,7 +209,9 @@ trait HasAttributes
             return;
         }
 
-        return $this->getRelationValue($key);
+        if(method_exists($this, 'setRelation')){
+            return $this->getRelationValue($key);
+        }
     }
 
     /**
@@ -1027,6 +1031,13 @@ trait HasAttributes
     public function setRawAttributes(array $attributes, $sync = false)
     {
         $this->attributes = $attributes;
+        if(method_exists($this, 'setRelation')){
+            foreach($attributes as $key => $value){
+                if(is_array($value)){
+                    $this->setRelationAttribute($key, $value);
+                }
+            }
+        }
 
         if ($sync) {
             $this->syncOriginal();

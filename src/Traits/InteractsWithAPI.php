@@ -6,7 +6,6 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use MacsiDigital\API\Support\Builder;
 use MacsiDigital\API\Traits\ForwardsCalls;
-use MacsiDigital\API\Exceptions\CantDeleteException;
 use MacsiDigital\API\Exceptions\KeyNotFoundException;
 use MacsiDigital\API\Exceptions\InvalidActionException;
 use MacsiDigital\API\Exceptions\ValidationFailedException;
