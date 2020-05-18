@@ -275,12 +275,9 @@ trait InteractsWithAPI
      */
     protected function performUpdate(Builder $query)
     {
-        $dirty = $this->getDirty();
-
-        if (count($dirty) > 0) {
-            // Need to think over this as only need to pass Dirty Attributes
-            $resource = (new $this->updateResource)->fill($this->getDirty());
-            
+        $resource = (new $this->updateResource)->fill($this, 'update');
+        
+        if($resource->getAttributes() != []){    
             $validator = $resource->validate();
 
             if ($validator->fails()) {
@@ -305,8 +302,8 @@ trait InteractsWithAPI
      */
     protected function performInsert(Builder $query)
     {
-        $resource = (new $this->storeResource)->fill($this->package()->toArray());
-        
+        $resource = (new $this->storeResource)->fill($this, 'insert');
+
         $validator = $resource->validate();
 
         if ($validator->fails()) {

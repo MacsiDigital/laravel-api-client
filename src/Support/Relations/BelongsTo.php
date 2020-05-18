@@ -10,6 +10,8 @@ class BelongsTo extends Relation
 {
     protected $relation;
 
+    public $type = 'BelongsTo';
+
     public function __construct($related, $owner, $name, $field, array $data = [])
     {
         $this->relatedClass = $related;

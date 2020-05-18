@@ -74,6 +74,16 @@ trait HasRelationships
         return $this->getRelation($name);
     }
 
+    public function has($relationship) 
+    {
+        // Need to check if relationship exists
+    }
+
+    public function doesntHave($relationship) 
+    {
+        // Need to check if relationship exists
+    }
+
     public function belongsToMany($related, $name="", $field="")
     {
         $name = $this->resolveRelationName($name);

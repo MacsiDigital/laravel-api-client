@@ -10,6 +10,9 @@ use MacsiDigital\API\Exceptions\HttpException;
 
 class Builder
 {
+    // Be good to add these:- findOrNew, firstOrNew, firstOrCreate and updateOrCreate
+    // and these whereKey, firstWhere, latest, oldest, findMany, findOrFail, firstOrFail, firstOr, whereBetween, whereNotBetween, whereIn, whereNotIn, whereNull, whereNotNull, whereDate, whereMonth, whereDay, whereYear, whereTime
+    // As we are not querying databases and API's vary greatly it may be that they need to be performed on the result set.
     protected $resource;
     protected $request;
     protected $queries = [];

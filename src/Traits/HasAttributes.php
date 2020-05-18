@@ -266,17 +266,6 @@ trait HasAttributes
         $relation->getResults();
     }
 
-    public function package() 
-    {
-        $class = new static($this->client);
-        $class->loadRaw = true;
-        $class->fill($this->getAttributes());
-        foreach($this->relations as $key => $relation){
-            $class->$key = $relation->getResults()->toArray();
-        }
-        return $class;
-    }
-
     /**
      * Convert the model's attributes to an array.
      *

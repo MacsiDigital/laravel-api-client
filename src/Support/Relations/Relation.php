@@ -17,9 +17,9 @@ abstract class Relation implements RelationContract
 	protected $relatedClass;
 	protected $name;
 
-    public function newRelation()
+    public function newRelation($data=[])
     {
-        return new $this->related->newInstance();
+        return $this->related->newInstance($data);
     }
 
     public function getParentModelName() 
@@ -34,35 +34,14 @@ abstract class Relation implements RelationContract
         return strtolower(end($segments));
     }
 
-    public function update($data)
-    {
-        if(is_object($data) && $data instanceof $this->relatedClass){
-            $this->relation = $data;
-        } elseif(is_array($data)) {
-            $this->relation->fill($data);
-        }
-        
-        return $this->relation;
-    }
-
-    public function make($data)
-    {
-        return $this->newInstance($data);
-    }
-
-    public function save($data)
-    {
-        
-    }
-
-    public function create($data)
-    {
-        return $this->related->newInstnace($data)->save();
-    }
-
     public function get()
     {
     	return $this->getResults();
+    }
+
+    public function getResults() 
+    {
+        return $this->relation;
     }
 
     /**

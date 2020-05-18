@@ -325,6 +325,8 @@ We try to automatically work out the name and field attributes if not passed for
 	// Will now look for userID
 ```
 
+With the name field we will check results for User and user
+
 Its worth pointing out that this is case sensitive so User and user will give different results, UserID and userID.  Again this is due to all API's being different.
 
 Its also worth pointing out that some resources dont interact directly with the API, in these cases the field is ignored.
@@ -577,7 +579,21 @@ When utilising the relationships in this way it will dip into that resource and 
 
 ```
 
-We can also require custom fields from relationships by using dot notation and not including the relationship:-
+We can pass an array directly into the relatedResource attribute if we dont want to create a persistant resource.
+
+```php
+    protected $relatedResource = [
+    	'address' => [
+            'street' => 'required|string|max:255',
+    		'address2' => 'nullable|string|max:255',
+    		'town' => 'required|string|max:255',
+    		'county' => 'nullable|string|max:255',
+    		'postcode' => 'required|string|max:10',
+        ],
+    ];
+```
+
+We can require fields from relationships by using dot notation and not including the relationship:-
 
 ```php
 	protected $persistAttributes = [
@@ -590,7 +606,9 @@ We can also require custom fields from relationships by using dot notation and n
     ];
 ```
 
-So in this instance we are only using street, town and postcode from the address model.
+So in this instance we are only interested in street, town and postcode from the address model.
+
+We can use a mix of the above, its not one or the other.
 
 ## Saving
 
@@ -599,9 +617,16 @@ To save its as simple as calling the save() function.
 ```php
 	$user->save();
 ```
+
 THe model will see if it already exists and call the correct update method.  If updating we will only pass dirty attributes to the persistance model.
 
 You can also utilise other laravel methods like make, create and update directly in the model.
+
+We pass back helpful exceptions if it fails due to the API rejecting it. For example some API's will have unusual rules, in Xero you can only pass multiple contacts if you supply email addresses, in this case we would get back an exception:-
+
+```bash
+MacsiDigital/API/Exceptions/HttpException with message 'A validation exception occurred : Additional people cannot be added when the primary person has no email address set.'
+```
 
 ## Deleting
 
