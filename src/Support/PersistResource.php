@@ -3,6 +3,7 @@
 namespace MacsiDigital\API\Support;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class PersistResource
@@ -10,6 +11,7 @@ class PersistResource
 
     protected $persistAttributes = [];
     protected $relatedResource = [];
+    protected $mutateAttributes = [];
 
     protected $relations = [];
     protected $object;
@@ -25,6 +27,7 @@ class PersistResource
                 $this->attributes[$key] = [];
             }
         }
+        $this->processEmpties();
         return $this;
     }
 
@@ -33,6 +36,8 @@ class PersistResource
         foreach ($object->getAttributes() as $key => $value) {
             if(Arr::exists($this->getPersistAttributes(), $key)){
                 $this->attributes[$key] = $value;
+            } elseif(Arr::exists($this->getMutateAttributes(), $key)){
+                $this->processMutate($key, $value);
             } elseif(is_array($value)) {
                 $this->attributes[$key] = $this->recursiveFill($key, $value);
             }
@@ -53,9 +58,16 @@ class PersistResource
 
     protected function fillForUpdate(object $object) 
     {
-        foreach ($object->getDirty() as $key => $value) {
+        if($object->updatesOnlyDirty()){
+            $data = $object->getDirty();
+        } else {
+            $data = $object->getAttributes();
+        }
+        foreach ($data as $key => $value) {
             if(Arr::exists($this->getPersistAttributes(), $key)){
                 $this->attributes[$key] = $value;
+            } elseif(Arr::exists($this->getMutateAttributes(), $key)){
+                $this->processMutate($key, $value);
             } elseif(is_array($value)) {
                 $this->attributes[$key] = $this->recursiveFill($key, $value);
             }
@@ -72,6 +84,11 @@ class PersistResource
             }
             $this->setRelation($name, $relation);
         }
+    }
+
+    public function processMutate($key, $value) 
+    {
+        data_set($this->attributes, $this->getMutateKey($key), $value);
     }
 
     public function processManyFill($key, $value) 
@@ -149,9 +166,44 @@ class PersistResource
         return $attributes;
     }
 
+    public function processEmpties() 
+    {
+        foreach($this->getAttributes() as $key => $value){
+            if(is_array($value)){
+                $this->attributes[$key] = $this->processRecursiveEmpty($value);
+                if(empty($this->attributes[$key])) {
+                    unset($this->attributes[$key]);
+                } 
+            }
+        }
+    }
+
+    public function processRecursiveEmpty(array $array) 
+    {
+        foreach($array as $key => $value) {
+            if(is_array($value)){
+                $value = $this->processRecursiveEmpty($value);
+                if(empty($value)) {
+                    unset($array[$key]);
+                }     
+            }
+        }
+        return $array;
+    }
+
     public function getPersistAttributes()
     {
         return $this->persistAttributes;
+    }
+
+    public function getMutateAttributes()
+    {
+        return $this->mutateAttributes;
+    }
+
+    public function getMutateKey($key)
+    {
+        return $this->mutateAttributes[$key];
     }
 
     public function getRelatedResources()

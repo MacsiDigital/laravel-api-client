@@ -15,7 +15,8 @@ abstract class Relation implements RelationContract
 	protected $owner;
     protected $related;
 	protected $relatedClass;
-	protected $name;
+    protected $name;
+    protected $relation;
 
     public function newRelation($data=[])
     {
@@ -27,7 +28,7 @@ abstract class Relation implements RelationContract
         $segments = explode('\\', get_class($this->parent));
         return strtolower(end($segments));
     }
-
+ 
     public function getRelatedModelName() 
     {
         $segments = explode('\\', get_class($this->related));
@@ -37,11 +38,6 @@ abstract class Relation implements RelationContract
     public function get()
     {
     	return $this->getResults();
-    }
-
-    public function getResults() 
-    {
-        return $this->relation;
     }
 
     /**

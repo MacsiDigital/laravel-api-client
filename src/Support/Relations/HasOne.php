@@ -19,37 +19,45 @@ class HasOne extends Relation
     {
         $this->relatedClass = $related;
         $this->related = new $related($owner->client);
-        if(array_key_exists($name, $owner->getAttributes())){
-            $this->hydrate($owner->getAttributes()[$name]);
-            unset($owner->$name);
-        } elseif(array_key_exists(Str::studly($name), $owner->getAttributes())){
-            $this->hydrate($owner->getAttributes()[Str::studly($name)]);
-            unset($owner->{Str::studly($name)});
-        }
         $this->owner = $owner;
         $this->name = $name;
         $this->field = $field;
+        $this->boot();
+    }
+
+    public function boot() 
+    {
+        if(array_key_exists($this->name, $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[$this->name]);
+            unset($this->owner->{$this->name});
+        } elseif(array_key_exists(Str::camel($this->name), $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[Str::camel($this->name)]);
+            unset($this->owner->{Str::camel($this->name)});
+        } elseif(array_key_exists(Str::studly($this->name), $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[Str::studly($this->name)]);
+            unset($this->owner->{Str::studly($this->name)});
+        } elseif(array_key_exists(Str::snake($this->name), $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[Str::snake($this->name)]);
+            unset($this->owner->{Str::snake($this->name)});
+        }
     }
 
     protected function hydrate($data) 
     {
     	if($data != []){
+            if($this->owner->hasKey()){
+                $data[$this->field] = $this->owner->getKey();
+            }
     		$this->relation = $this->related->newFromBuilder($data);
     	} else {
     		$this->relation = $this->related->newInstance();
-    	} 
+    	}
     }
 
-    public function make($data)
+    public function empty() 
     {
-        if($this->relation == null){
-            $this->relation = $this->newRelation($data);
-            if($this->relation instanceof InteractsWithAPI){
-                $this->relation->{$this->field} = $this->owner->id;
-            }
-            return $this->relation;
-        }
-        throw new RelationAlreadyExistsException($this->owner, $this->related);
+        $this->relation = null;
+        return $this;
     }
 
     public function save(object $object)
@@ -57,7 +65,9 @@ class HasOne extends Relation
         if($this->relation == null){
             if($object instanceof InteractsWithAPI){
                 if($object instanceof $this->relatedClass){
-                    $object->{$this->field} = $this->owner->id;
+                    if($this->owner->hasKey()){
+                        $object->{$this->field} = $this->owner->getKey();
+                    }
                     $this->relation = $object->save();
                 } else {
                     throw new IncorrectRelationshipModel($this->related, $object);
@@ -67,6 +77,23 @@ class HasOne extends Relation
             }
         }
         throw new RelationAlreadyExistsException($this->owner, $this->related);
+    }
+
+    public function getResults() 
+    {
+        if(empty($this->relation)){
+            $this->getRelationFromApi();
+        }   
+        return $this->relation;
+    }
+
+    public function getRelationFromApi() 
+    {
+        $this->relation = $this->related->newInstance([$this->field => $this->owner->getKey()])->getOne();
+        if($this->field != null && $this->owner->hasKey() && $this->relation != null){
+            $this->relation->{$this->field} = $this->owner->getKey();
+        }
+        return $this;
     }
 
     public function create($data)

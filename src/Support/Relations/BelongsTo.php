@@ -12,7 +12,7 @@ class BelongsTo extends Relation
 
     public $type = 'BelongsTo';
 
-    public function __construct($related, $owner, $name, $field, array $data = [])
+    public function __construct($related, $owner, $name, $field)
     {
         $this->relatedClass = $related;
         $this->related = new $related($owner->client);
@@ -39,6 +39,16 @@ class BelongsTo extends Relation
     	} else {
     		return $this->relation;
     	}
+    }
+
+    public function associate($object) 
+    {
+        
+    }
+
+    public function dissociate() 
+    {
+        
     }
 
 }

@@ -7,11 +7,12 @@ use MacsiDigital\API\Dev\Api;
 use Illuminate\Support\Collection;
 use MacsiDigital\API\Support\ResultSet;
 use MacsiDigital\API\Exceptions\HttpException;
+use MacsiDigital\API\Exceptions\ModelNotFoundException;
 
 class Builder
 {
     // Be good to add these:- findOrNew, firstOrNew, firstOrCreate and updateOrCreate
-    // and these whereKey, firstWhere, latest, oldest, findMany, findOrFail, firstOrFail, firstOr, whereBetween, whereNotBetween, whereIn, whereNotIn, whereNull, whereNotNull, whereDate, whereMonth, whereDay, whereYear, whereTime
+    // and these whereKey, latest, oldest, firstOr, whereBetween, whereNotBetween, whereNotIn, whereNull, whereNotNull, whereDate, whereMonth, whereDay, whereYear, whereTime
     // As we are not querying databases and API's vary greatly it may be that they need to be performed on the result set.
     protected $resource;
     protected $request;
@@ -21,8 +22,8 @@ class Builder
     protected $orders = [];
     protected $limit = null;
     protected $offset = null;
-    protected $data = null;
     protected $raw = false;
+    protected $throwExceptionsIfRaw = false;
     protected $paginate = false;
 
     protected $pageField;
@@ -50,6 +51,7 @@ class Builder
         $this->setPerPageField($resource->client->getPerPageField());
         $this->setPageField($resource->client->getPageField());
         $this->raw($resource->client->getRaw());
+        $this->withExceptions($resource->client->getThrowExceptionsIfRaw());
         $this->setPaginate($resource->client->getPagination());
         if($this->shouldPaginate()){
             $this->paginate($resource->client->getDefaultPaginationRecords());
@@ -118,6 +120,12 @@ class Builder
         return $this;
     }
 
+    protected function setPageField($field)
+    {
+        $this->pageField = $field;
+        return $this;
+    }
+
     protected function setMaxPerPage($amount)
     {
         $this->maxPerPage = $amount;
@@ -127,12 +135,6 @@ class Builder
     protected function setMinPerPage($amount)
     {
         $this->minPerPage = $amount;
-        return $this;
-    }
-
-    protected function setPageField($field)
-    {
-        $this->pageField = $field;
         return $this;
     }
 
@@ -149,33 +151,66 @@ class Builder
     public function find($id, $column="") 
     {
         if(is_array($id)){
-            if($column == ''){
-                $column = $this->resource->getKeyName().'s';
-            }
-            return $this->whereIn($id, $column);
+            return $this->whereIn($id, $column)->get(null, $raw);
         }
-        $response = $this->request->get($this->retreiveEndPoint('get').'/'.$id, $this->combineQueries());
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('find').'/'.$id
+        ]), "individual", "allow");
+    }
+
+    public function findMany(array $id, $column="") 
+    {
+        return $this->whereIn($id, $column)->get();
+    }
+
+    public function findOrFail($id) 
+    {
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get').'/'.$id
+        ]), "individual", "error");
+    }
+
+    public function firstOrFail() 
+    {
+        if(!is_null($model = $this->first())){
+            return $model;
+        }
+        throw (new ModelNotFoundException)->setModel(get_class($this->resource));
+    }
+
+    public function sendRequest($method, $attributes){
+        return $this->request->$method(...$attributes);
+    }
+
+    public function handleResponse($response, $type="individual", $ifEmpty="default")
+    {
         if($this->raw){
-            return $response;
-        }
-        if($response->ok()){
-            return $this->hydrate($response);
-        } else if($response->getStatusCode() == 404) {
-            return null;
+            return $this->handleRaw($response);
+        } elseif($response->successful()){
+            return $this->{'process'.Str::studly($type).'Response'}($response);
+        } elseif($response->getStatusCode() == 404){
+            return $this->handle404($response, $ifEmpty);
         } else {
             throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
     }
 
-    public function findOrFail($id) 
+    public function handleRaw($response) 
     {
-        $response = $this->request->get($this->retreiveEndPoint('get').'/'.$id, $this->combineQueries());
-        if($this->raw){
+        if(!$this->throwExceptionsIfRaw){
             return $response;
+        } elseif($response->successful()){
+            return $response;
+        } else {
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
         }
-        if($response->ok()){
-            return $this->hydrate($response);
-        } else if($response->getStatusCode() == 404) {
+    }
+
+    public function handle404($response, $ifEmpty) 
+    {
+        if($ifEmpty == 'allow'){
+            return null;
+        } elseif($ifEmpty == 'error'){
             return $response->throw();
         } else {
             throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
@@ -184,82 +219,63 @@ class Builder
 
     public function all() 
     {
-        $response = $this->request->get($this->retreiveEndPoint('get'), $this->addPagination($this->combineQueries()));
-        if($this->raw){
-            return $response;
-        }
-        if($response->ok()){
-            return $this->processAllResultSet($response);
-        } else {
-            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
-        }
+        $this->setPerPageToMax();
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get'),
+            $this->addPagination([]),
+        ]), 'all');
+        
     }
 
     public function get()
     {
-        if($this->data != null){
-            return $this->data;
-        }
-        $response = $this->request->get($this->retreiveEndPoint('get'), $this->addPagination($this->combineQueries()));
-        if($this->raw){
-            return $response;
-        }
-        if($response->ok()){
-            return $this->data = $this->processResultSet($response);
-        } else {
-            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
-        }
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get'),
+            $this->addPagination($this->combineQueries())
+        ]), 'get');
+    }
+
+    public function getOne()
+    {
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get'),
+            $this->addPagination($this->combineQueries())
+        ]), 'individual');
     }
 
     public function post($attributes)
     {
-        $response = $this->request->post($this->retreiveEndPoint('post'), $attributes, $this->combineQueries());
-        if($this->raw){
-            return $response;
-        }
-        if($response->successful()){
-            return $this->hydrate($response, false);
-        } else {
-            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
-        }
+        return $this->handleResponse($this->sendRequest('post', [
+            $this->retreiveEndPoint('post'),
+            $attributes,
+            $this->combineQueries()
+        ]));
     }
 
     public function patch($attributes)
     {
-        $response = $this->request->patch($this->retreiveEndPoint('patch'), $attributes, $this->combineQueries());
-        if($this->raw){
-            return $response;
-        }
-        if($response->successful()){
-            return $this->hydrate($response);
-        } else {
-            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
-        }
+        return $this->handleResponse($this->sendRequest('patch', [
+            $this->retreiveEndPoint('patch'),
+            $attributes,
+            $this->combineQueries()
+        ]));
     }
 
     public function put($attributes)
     {
-        $response = $this->request->put($this->retreiveEndPoint('put'), $attributes, $this->combineQueries());
-        if($this->raw){
-            return $response;
-        }
-        if($response->successful()){
-            return $this->hydrate($response);
-        } else {
-            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
-        }
+        return $this->handleResponse($this->sendRequest('put', [
+            $this->retreiveEndPoint('put'),
+            $attributes,
+            $this->combineQueries()
+        ]));
     }
 
     public function delete() 
     {
-        $response = $this->request->delete($this->retreiveEndPoint('delete'), $this->combineQueries());
-        if($this->raw){
-            return $response;
-        }
-        if($response->failed()){
-            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
-        }
-        return true;
+        return $this->handleResponse($this->sendRequest('post', [
+            $this->retreiveEndPoint('post'),
+            $this->combineQueries()
+        ]));
     }
 
     public function first()
@@ -273,16 +289,13 @@ class Builder
         return $this->first();
     }
 
-    public function query($column, $value) 
+    public function whereRaw($column, $value) 
     {
         $this->queries[$column] = $value;
     }
     
     public function where($column, $operand = null, $value = null)
     {
-        if($this->data != null){
-            $this->data = null;
-        }
         if(is_array($column)){
             foreach($column as $query){
                 $this->where(...$query);
@@ -347,7 +360,10 @@ class Builder
     public function whereIn(array $values, $column="") 
     {
         $string = implode(',', $values);
-        return $this->queries($column, $string)->get();
+        if($column == ''){
+            $column = $this->resource->getKeyName().'s';
+        }
+        return $this->queries($column, $string);
     }
 
     public function orderBy($value, $column='order') 
@@ -358,12 +374,7 @@ class Builder
 
     public function count() 
     {
-        if(isset($this->data)){
-            return $this->data->count();
-        } else {
-            $this->data = $this->get();
-        }
-        return $this->data->count();
+        return $this->get()->count();
     }
 
     public function setPaginate($status=true) 
@@ -399,7 +410,27 @@ class Builder
 
     public function setPerPage($perPage)
     {
+        if($this->maxPerPage != '' && $this->minPerPage > $perPage){
+            $perPage = $this->minPerPage;
+        }
+        if($this->maxPerPage != '' && $this->maxPerPage < $perPage){
+            $perPage = $this->maxPerPage;
+        }
         $this->perPage = $perPage;
+
+        return $this;
+    }
+
+    public function setPerPageToMax()
+    {
+        $this->perPage = $this->maxPerPage;
+
+        return $this;
+    }
+
+    public function setPerPageToMin()
+    {
+        $this->perPage = $this->minPerPage;
 
         return $this;
     }
@@ -414,6 +445,12 @@ class Builder
     public function raw($status=true) 
     {
         $this->raw = $status;
+        return $this;
+    }
+
+    public function withExceptions($status=true) 
+    {
+        $this->throwExceptionsIfRaw = $status;
         return $this;
     }
 
@@ -502,15 +539,8 @@ class Builder
     {
         $this->resetQueries();
         $this->resetOrders();
-        $this->resetData();
         $this->resetLimit();
         $this->resetOffset();
-        return $this;
-    }
-
-    public function resetData()
-    {
-        $this->data = null;
         return $this;
     }
 
@@ -541,19 +571,28 @@ class Builder
         return $this;
     }
     
-    protected function processResultSet($response)
+    protected function processGetResponse($response)
     {
         return new ResultSet($this, $response, $this->resource);
     }
 
-    protected function processAllResultSet($response)
+    protected function processAllResponse($response)
     {
         return new ResultSet($this, $response, $this->resource, true);
     }
 
-    protected function hydrate($response)
+    protected function processIndividualResponse($response)
     {
-        return $this->resource->newFromBuilder($response->json()[$this->getApiDataField()]);
+        if($this->getApiDataField() != null){
+            $data = $response->json()[$this->getApiDataField()];
+        } else {
+            $data = $response->json();
+        }
+        if(isset($data[0])){
+            return $this->resource->newFromBuilder($data[0]);
+        } else {
+            return $this->resource->newFromBuilder($data);
+        }
     }
 
     public function prepareHttpErrorMessage($response)

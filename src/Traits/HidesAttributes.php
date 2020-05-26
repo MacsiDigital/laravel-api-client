@@ -2,6 +2,8 @@
 
 namespace MacsiDigital\API\Traits;
 
+// Just the standard direct from Laravel
+
 trait HidesAttributes
 {
     /**

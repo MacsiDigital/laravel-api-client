@@ -3,6 +3,7 @@
 namespace MacsiDigital\API\Exceptions;
 
 use Exception;
+use MacsiDigital\API\Support\Response;
 
 class RequestException extends Exception
 {

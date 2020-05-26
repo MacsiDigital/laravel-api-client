@@ -3,6 +3,7 @@
 namespace MacsiDigital\API\Traits;
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use MacsiDigital\API\Support\Builder;
 use MacsiDigital\API\Traits\ForwardsCalls;
@@ -28,21 +29,27 @@ trait InteractsWithAPI
      */
     public $wasRecentlyCreated = false;
     
-    protected $allowedMethods = ['get', 'post', 'patch', 'put', 'delete'];
+    // Allow not a RESTful verb we have 'find' for requests where the id is passed in the URL.
+    protected $allowedMethods = ['find', 'get', 'post', 'patch', 'put', 'delete'];
 
     protected $endPoint = 'user';
+
+    protected $customEndPoints = [];
 
     protected $createMethod = 'post';
 
     protected $updateMethod = 'patch';
 
-    protected $storeResource;
+    protected $insertResource;
     protected $updateResource;
 
     protected $primaryKey = 'id';
 
     // Most API's return data in a data attribute.  However we need to override on a model basis as some like Xero return it as 'Users' or 'Invoices'
     protected $apiDataField = 'data';
+
+    // Also, some API's return 'users' for multiple and user for single, set teh multiple field below to wheat is required if different
+    protected $apiMultipleDataField = 'data';
 
     public function query()
     {
@@ -58,6 +65,11 @@ trait InteractsWithAPI
     public function getApiDataField()
     {
         return $this->apiDataField;
+    }
+
+    public function getApiMultipleDataField()
+    {
+        return $this->apiMultipleDataField;
     }
 
     public function getUpdateMethod()
@@ -82,20 +94,38 @@ trait InteractsWithAPI
         return $this;
     }
 
+    public function exists()
+    {
+        return $this->exists;
+    }
+
+    public function hasKey()
+    {
+        return $this->getKey() != null;
+    }
+
     public function getKey()
     {
         return $this->getAttribute($this->getKeyName());
     }
 
-    public function exists()
+    public function getKeyForEndPoint() 
     {
-        return $this->getKey() != null;
+        if($this->hasKey()){
+            return '/'.$this->getEndPoint();
+        }
+        return;
+    }
+
+    public function setEndPoint($type, $endPoint)
+    {
+        $this->customEndPoints[$type] = $endPoint;
     }
 
     public function getEndPoint($type='get') 
     {
         if($this->canPerform($type)){
-            return $this->{'get'.Str::studly($type).'EndPoint'}();
+            return $this->resolveBindings($this->{'get'.Str::studly($type).'EndPoint'}());
         } else {
             throw new InvalidActionException(sprintf(
                 '%s action not allowed for %s', Str::studly($type), static::class
@@ -118,38 +148,77 @@ trait InteractsWithAPI
         return $this->allowedMethods;
     }
 
+    protected function hasCustomEndPoint($type)
+    {
+        return isset($this->customEndPoints[$type]);
+    }
+
+    protected function getCustomEndPoint($type)
+    {
+        return $this->customEndPoints[$type];
+    }
+
     public function getGetEndPoint() 
     {
+        if($this->hasCustomEndPoint('get')){
+            return $this->getCustomEndPoint('get').$this->getKeyForEndPoint();
+        }
+        return $this->endPoint;
+    }
+
+    public function getFindEndPoint() 
+    {
+        if($this->hasCustomEndPoint('find')){
+            return $this->getCustomEndPoint('find').$this->getKeyForEndPoint();
+        }
         return $this->endPoint;
     }
 
     public function getPostEndPoint() 
     {
-        return $this->endPoint;
+        if($this->hasCustomEndPoint('post')){
+            return $this->getCustomEndPoint('post').$this->getKeyForEndPoint();
+        }
+        return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function getPatchEndPoint() 
     {
-        if($this->exists()){
-            return $this->endPoint.'/'.$this->getKey();
+        if($this->hasCustomEndPoint('patch')){
+            return $this->getCustomEndPoint('patch').$this->getKeyForEndPoint();
         }
-        throw new KeyNotFoundException(static::class);
+        return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function getPutEndPoint() 
     {
-        if($this->exists()){
-            return $this->endPoint.'/'.$this->getKey();
+        if($this->hasCustomEndPoint('put')){
+            return $this->getCustomEndPoint('put').$this->getKeyForEndPoint();
         }
-        throw new KeyNotFoundException(static::class);
+        return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function getDeleteEndPoint() 
     {
-        if($this->exists()){
-            return $this->endPoint.'/'.$this->getKey();
+        
+        if($this->hasCustomEndPoint('delete')){
+            return $this->getCustomEndPoint('delete').$this->getKeyForEndPoint();
         }
-        throw new KeyNotFoundException(static::class);
+        return $this->endPoint.$this->getKeyForEndPoint();
+    }
+
+    public function resolveBindings($url) 
+    {
+        if(Str::contains($url, '{')){
+            $pattern = '/{\K[^}]*(?=})/m';
+            $n = preg_match($pattern, $url, $matches);
+            if($n > 0){
+                foreach($matches as $match){
+                    $url = Str::replaceFirst('{'.$match.'}', $this->{str_replace(':', '_', $match)}, $url);
+                }
+            }
+        }
+        return $url;
     }
 
     /**
@@ -161,7 +230,7 @@ trait InteractsWithAPI
      */
     public function update(array $attributes = [], array $options = [])
     {
-        if (!$this->exists()) {
+        if (!$this->hasKey()) {
             return false;
         }
 
@@ -205,7 +274,7 @@ trait InteractsWithAPI
      */
     public function create(array $attributes = [], array $options = [])
     {
-        if ($this->exists()) {
+        if ($this->hasKey()) {
             return false;
         }
         
@@ -223,16 +292,12 @@ trait InteractsWithAPI
         $query = $this->newQuery();
 
         $this->beforeSave($options);
-        
         // If the model already exists in the database we can just update our record
         // that is already in this database using the current IDs in this "where"
         // clause to only update this model. Otherwise, we'll just insert them.
         if ($this->exists()) {
-            if($this->isDirty()){
-                $resource = $this->performUpdate($query);
-            } else {
-                $resource = $this;
-            }
+            $resource = $this->performUpdate($query);
+            
         }
         // If the model is brand new, we'll insert it into our database and set the
         // ID attribute on the model to the value of the newly inserted row's ID
@@ -276,15 +341,16 @@ trait InteractsWithAPI
     protected function performUpdate(Builder $query)
     {
         $resource = (new $this->updateResource)->fill($this, 'update');
-        
         if($resource->getAttributes() != []){    
             $validator = $resource->validate();
 
             if ($validator->fails()) {
                 throw new ValidationFailedException($validator->errors());
             }
-
+            
             $resource = $query->{$this->getUpdateMethod()}($resource->getAttributes());
+
+            dd($resource);
 
             $this->syncChanges();
 
@@ -302,8 +368,7 @@ trait InteractsWithAPI
      */
     protected function performInsert(Builder $query)
     {
-        $resource = (new $this->storeResource)->fill($this, 'insert');
-
+        $resource = (new $this->insertResource)->fill($this, 'insert');
         $validator = $resource->validate();
 
         if ($validator->fails()) {
@@ -317,6 +382,11 @@ trait InteractsWithAPI
         $resource->wasRecentlyCreated = true;
 
         return $resource;
+    }
+
+    protected function performCustomQuery($method, $attributes)
+    {
+        return $this->newQuery()->$method(...$attributes);
     }
 
     public function beforeSave()
@@ -351,7 +421,7 @@ trait InteractsWithAPI
         // We will actually pull the models from the database table and call delete on
         // each of them individually so that their events get fired properly with a
         // correct set of attributes in case the developers wants to check these.
-        $key = ($instance = new static)->getKeyName();
+        $key = ($instance = (new static($this->client)))->getKeyName();
 
         foreach ($instance->whereIn($key, $ids)->get() as $model) {
             if ($model->delete()) {
@@ -377,7 +447,7 @@ trait InteractsWithAPI
             throw new Exception('No primary key defined on model.');
         }
 
-        if (! $this->exists()) {
+        if (! $this->hasKey()) {
             return;
         }
         $this->beforeDeleting();
@@ -464,7 +534,7 @@ trait InteractsWithAPI
 
     public function fresh() 
     {
-        if (! $this->exists) {
+        if (! ($this->exists())) {
             return;
         }
 
@@ -478,7 +548,7 @@ trait InteractsWithAPI
      */
     public function refresh()
     {
-        if (! $this->exists) {
+        if (! ($this->exists())) {
             return $this;
         }
 
@@ -507,7 +577,7 @@ trait InteractsWithAPI
             $this->attributes, $except ? array_unique(array_merge($except, $defaults)) : $defaults
         );
 
-        return tap(new static, function ($instance) use ($attributes) {
+        return tap(new static($this->client), function ($instance) use ($attributes) {
             $instance->setRawAttributes($attributes);
 
             $instance->setRelations($this->relations);

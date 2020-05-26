@@ -5,6 +5,8 @@ namespace MacsiDigital\API\Support\Relations;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
+use MacsiDigital\API\Exceptions\NotAPersistableModel;
+use MacsiDigital\API\Exceptions\IncorrectRelationshipModel;
 
 class HasMany extends Relation
 {
@@ -12,22 +14,33 @@ class HasMany extends Relation
 
     public $type = 'HasMany';
 
-    public function __construct($related, $owner, $name, $field, array $data = [])
+    public function __construct($related, $owner, $name, $field)
     {
         $this->relatedClass = $related;
         $this->related = new $this->relatedClass($owner->client);
-        if(array_key_exists($name, $owner->getAttributes())){
-            $this->hydrate($owner->getAttributes()[$name]);
-            unset($owner->$name);
-        } elseif(array_key_exists(Str::studly($name), $owner->getAttributes())){
-            $this->hydrate($owner->getAttributes()[Str::studly($name)]);
-            unset($owner->{Str::studly($name)});
-        } else {
-            $this->relation = new Collection;
-        }
         $this->owner = $owner;
         $this->name = $name;
         $this->field = $field;
+        $this->boot();
+    }
+
+    public function boot() 
+    {
+        if(array_key_exists($this->name, $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[$this->name]);
+            unset($this->owner->{$this->name});
+        } elseif(array_key_exists(Str::camel($this->name), $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[Str::camel($this->name)]);
+            unset($this->owner->{Str::camel($this->name)});
+        } elseif(array_key_exists(Str::studly($this->name), $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[Str::studly($this->name)]);
+            unset($this->owner->{Str::studly($this->name)});
+        } elseif(array_key_exists(Str::snake($this->name), $this->owner->getAttributes())){
+            $this->hydrate($this->owner->getAttributes()[Str::snake($this->name)]);
+            unset($this->owner->{Str::snake($this->name)});
+        } else {
+            $this->relation = new Collection;
+        }
     }
 
     protected function hydrate($array) 
@@ -35,35 +48,55 @@ class HasMany extends Relation
     	$collection = new Collection;
         if($array != []){
             foreach($array as $data){
+                if($this->owner->hasKey()){
+                    $data[$this->field] = $this->owner->getKey();
+                }
                 $collection->push($this->related->newFromBuilder($data));
             }
         }
     	$this->relation = $collection;
     }
 
+    public function empty() 
+    {
+        $this->relation = new Collection;
+        return $this;
+    }
+
     public function make($data)
     {
         $object = $this->newRelation($data);
         if($object instanceof InteractsWithAPI){
-            $object->{$this->field} = $this->owner->id;
+            if($this->owner->hasKey()){
+                $object->{$this->field} = $this->owner->getKey();
+            }
         }
-        $this->relation->push($object);
+        $this->attach($object);
         return $object;
+    }
+
+    public function attach($object)
+    {
+        $this->relation->push($object);
+        return $this;
+    }
+
+    public function detach($object)
+    {
+        
     }
 
     public function save(object $object)
     {
-        if($object instanceof InteractsWithAPI){
-            if($object instanceof $this->relatedClass){
-                $object->{$this->field} = $this->owner->id;
-                $object->save();
-                $this->relation->push($object);
-                return $object;
-            } else {
-                throw new IncorrectRelationshipModel($this->related, $object);
+        if($object instanceof $this->relatedClass){
+            if($this->field != null && $this->owner->hasKey()){
+                $object->{$this->field} = $this->owner->getKey();
             }
+            $object->save();
+            $this->attach($object);
+            return $object;
         } else {
-            throw new NotAPersistableModel($object);
+            throw new IncorrectRelationshipModel($this->related, $object);
         }
     }
 
@@ -77,7 +110,7 @@ class HasMany extends Relation
 
     public function create($data)
     {
-        return $this->make($data)->save();
+        return $this->save($this->make($data));
     }
 
     public function createMany(array $data)
@@ -86,6 +119,52 @@ class HasMany extends Relation
             $this->create($value);
         }
         return $this;
+    }
+
+    public function getResults() 
+    {
+        if($this->relation->count() == 0){
+            $this->getRelationFromApi();
+        }   
+        return $this->relation;
+    }
+
+    public function first() 
+    {
+        return $this->getResults()->first()->fresh();
+    }
+
+
+    public function getRelationFromApi() 
+    {
+        // Not throwing error on bad call - maybe need to create a rawData method on Builder
+        $this->relation = $this->related->newInstance([$this->field => $this->owner->getKey()])->all();
+        if($this->field != null && $this->owner->hasKey()){
+            foreach($this->relation as $object){
+                $object->{$this->field} = $this->owner->getKey();
+            }
+        }
+        return $this;
+    }
+
+    public function nextPage() 
+    {
+        $this->relation = $this->relation->nextPage();
+        if($this->field != null && $this->owner->hasKey()){
+            foreach($this->relation as $object){
+                $object->{$this->field} = $this->owner->getKey();
+            }
+        }
+    }
+
+    public function prevPage() 
+    {
+        $this->relation = $this->relation->prevPage();
+        if($this->field != null && $this->owner->hasKey()){
+            foreach($this->relation as $object){
+                $object->{$this->field} = $this->owner->getKey();
+            }
+        }
     }
 
     /**

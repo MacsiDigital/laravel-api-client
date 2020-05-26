@@ -29,14 +29,24 @@ trait HasRelationships
         if($name == ''){
             $name = debug_backtrace()[2]['function'];
         }
+        if(static::$snakeAttributes){
+            $name = Str::snake($name);
+        } else {
+            $name = Str::studly($name);
+        }
         return $name;
     }
 
     protected function resolveRelationField($related, $field, $name) 
     {
-        if($related instanceof ApiResource){
+        if(method_exists($related, 'getRelations')){
             if($field == ''){
                 $field = Str::singular($name).$this->IdSuffix;
+            }
+            if(static::$snakeAttributes){
+                $field = Str::snake($field);
+            } else {
+                $field = Str::studly($field);
             }
             return $field;
         } else {
@@ -68,8 +78,18 @@ trait HasRelationships
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){
-            $field = $this->resolveRelationField($related, $field, $name);
+            $field = $this->resolveRelationField($related, $field, $this->getModelName());
             $this->setRelation($name, new HasMany($related, $this, $name, $field));
+        }
+        return $this->getRelation($name);
+    }
+
+    public function hasCustom($related, $class, $name="", $field="")
+    {
+        $name = $this->resolveRelationName($name);
+        if(!$this->relationLoaded($name)){
+            $field = $this->resolveRelationField($related, $field, $this->getModelName());
+            $this->setRelation($name, new $class($related, $this, $name, $field));
         }
         return $this->getRelation($name);
     }
@@ -198,7 +218,9 @@ trait HasRelationships
 
     public function isRelationship($key) 
     {
-        return method_exists($this, $key);
+        if(method_exists($this, $key) || method_exists($this, Str::studly($key))){
+            return true;
+        }
     }
 
 }

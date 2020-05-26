@@ -26,6 +26,9 @@ abstract class Entry implements EntryContract
     // Should return raw responses and not models/resultsets
     protected $raw = false;
 
+    // Shoule we throw exceptions in cases where a server error occurs
+    protected $throwExceptionsIfRaw = false;
+
     // Should results be paginated by default.
     protected $pagination = true;
 
@@ -171,6 +174,11 @@ abstract class Entry implements EntryContract
     public function getRaw()
     {
         return $this->raw;    
+    }
+
+    public function getThrowExceptionsIfRaw()
+    {
+        return $this->throwExceptionsIfRaw;    
     }
 
     public function hasMaxQueryLimit() 
