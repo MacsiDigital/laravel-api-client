@@ -12,9 +12,11 @@ composer require macsidigital/laravel-api-client
 
 ## Versions
 
-1.0 - Laravel 5.5 - 6 - Bug fixes only, mainly there for backward compatibility, if there are any issues then create a pull request.
+1.0 - Laravel 5.5 - 5.8 - Bug fixes only, mainly there for backward compatibility, if there are any issues then create a pull request.
 
-2.0 - Laravel 7.0 - Maintanined, again feel free to create pull requests.  This is open source which is a 2 way street.  Reason why it only uses Laravel 7 is because we hook into the new HTTP/Client and some other models in Laravel, thankfully created by Taylor Otwell.
+2.0 - Laravel 6.0 - Maintanined, again feel free to create pull requests.  This is open source which is a 2 way street.
+
+3.0 - Laravel 7.0 - Maintanined, again feel free to create pull requests.  This is open source which is a 2 way street.  Reason why it only uses Laravel 7 is because we hook into the new HTTP/Client and some other models in Laravel, thankfully created by Taylor Otwell.
 
 ## Usage
 
@@ -382,7 +384,7 @@ In a similar way we can override the priamryKey as some api's will keep the ID f
 
 ### EndPoints
 
-A quick note on endpoints, we can set and endpoint as 'users' but we can also include bound models similar to a laravel route when results are returned as part of a relationship.
+A quick note on endpoints, we can set an endpoint as 'users' but we can also include bound models similar to a laravel route when results are returned as part of a relationship.
 
 ```php
     protected $endPoint = 'users/{user:id}/settings';
@@ -816,7 +818,7 @@ Some API's will mutate the data, a common case is wrapping the fields in a new a
    ]
 ```
 
-To achieve this we can use Mutators
+To achieve this we can use Mutators on the persistModel
 
 ```php
     protected $persistAttributes = [
@@ -861,6 +863,25 @@ To delete we would just call the delete function, this will return true if it de
 ```php
 	$user->delete();
 ```
+
+## Calling custom requests
+
+Whilst we do our best to cover the main restful endPoints for models, there are going to be some cases where we have to create something custom.
+
+We have tried to make that as easy as possible, each model has the API client injected in on instantiation, so we can create any function to call on the API.  For example, zoom exposes an endPoint to upload a profile picture, we could create persistModels, but it may be overkill, so we can simply create a function like so
+
+```php
+    public function updateProfilePicture($image)
+    {
+        $filesize = number_format(filesize($image) / 1048576,2);
+        if($filesize > 2){
+            throw new FileTooLargeException($image, $filesize, '2MB');
+        } else {
+            return $this->newQuery()->attachFile('pic_file', file_get_contents($image), $image)->sendRequest('post', ['users/'.$this->id.'/picture'])->successful();
+        }
+    }
+```
+Nice and simple.
 
 ### Changelog
 

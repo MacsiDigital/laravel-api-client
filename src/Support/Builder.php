@@ -38,6 +38,9 @@ class Builder
     protected $allowedOperands;
     protected $defaultOperand;
 
+    protected $asForm = false;
+    protected $contentType = '';
+    protected $files = [];
 
     public function __construct($resource)
     {
@@ -138,6 +141,24 @@ class Builder
         return $this;
     }
 
+    public function attachFile($key, $file, $filename="")
+    {
+        $this->files[$key] = ['file' => $file, 'filename' => $filename];
+        return $this;
+    }
+
+    public function setContentType($type)
+    {
+        $this->contentType = $type;
+        return $this;
+    }
+
+    public function asForm($boolean = true)
+    {
+        $this->asForm = $boolean;
+        return $this;
+    }
+
     protected function retreiveEndPoint($type="get")
     {
         return $this->resource->getEndPoint($type);
@@ -178,7 +199,28 @@ class Builder
         throw (new ModelNotFoundException)->setModel(get_class($this->resource));
     }
 
+    protected function processHeaders() 
+    {
+        if($this->asForm){
+            $this->request->asForm();
+        }
+        if($this->contentType != ""){
+            $this->request->contentType($this->contentType);
+        }
+    }
+
+    protected function processFiles() 
+    {
+        if($this->files != []){
+            foreach($this->files as $key => $file){
+                $this->request->attach($key, $file['file'], $file['filename']);
+            }
+        }
+    }
+
     public function sendRequest($method, $attributes){
+        $this->processHeaders();
+        $this->processFiles();
         return $this->request->$method(...$attributes);
     }
 
