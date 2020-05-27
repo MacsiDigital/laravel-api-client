@@ -8,18 +8,68 @@ use MacsiDigital\API\Traits\HasRelationships;
 
 class Resource
 {
-	use HasAttributes, HasRelationships, HidesAttributes;
+    use HasAttributes, HasRelationships, HidesAttributes;
 
     public $client;
 
-    public function __construct(Entry $client)
+    public function __construct(Entry $client, $attributes = [])
     {
         $this->client = $client;
+
+        $this->syncOriginal();
+
+        $this->fill($attributes);
     }
 
-    public function fresh() 
+    /**
+     * Fill the model with an array of attributes.
+     *
+     * @param  array  $attributes
+     * @return $this
+     *
+     */
+    public function fill(array $attributes)
     {
-        return new static($this->client);
+        foreach ($attributes as $key => $value) {
+            $this->setAttribute($key, $value);
+        }
+        
+        return $this;
+    }
+
+    /**
+     * Create a new instance of the given model.
+     *
+     * @param  array  $attributes
+     * @param  bool  $exists
+     * @return static
+     */
+    public function newInstance($attributes = [], $exists = false)
+    {
+        // This method just provides a convenient way for us to generate fresh model
+        // instances of this current model. It is particularly useful during the
+        // hydration of new objects via the Eloquent query builder instances.
+        $model = new static($this->client, (array) $attributes);
+
+        $model->exists = $exists;
+
+        return $model;
+    }
+
+    /**
+     * Create a new model instance that is existing.
+     *
+     * @param  array  $attributes
+     * @param  string|null  $connection
+     * @return static
+     */
+    public function newFromBuilder($attributes = [])
+    {
+        $model = $this->newInstance([], true);
+
+        $model->setRawAttributes((array) $attributes, true);
+
+        return $model;
     }
 
     /**

@@ -6,17 +6,24 @@ use Illuminate\Support\Str;
 use MacsiDigital\API\Dev\Api;
 use Illuminate\Support\Collection;
 use MacsiDigital\API\Support\ResultSet;
+use MacsiDigital\API\Exceptions\HttpException;
+use MacsiDigital\API\Exceptions\ModelNotFoundException;
 
 class Builder
 {
-	protected $resource;
-	protected $request;
-	protected $queries = [];
-	protected $orders = [];
-	protected $limit = null;
-	protected $offset = null;
-	protected $data = null;
+    // Be good to add these:- findOrNew, firstOrNew, firstOrCreate and updateOrCreate
+    // and these whereKey, latest, oldest, firstOr, whereBetween, whereNotBetween, whereNotIn, whereNull, whereNotNull, whereDate, whereMonth, whereDay, whereYear, whereTime
+    // As we are not querying databases and API's vary greatly it may be that they need to be performed on the result set.
+    protected $resource;
+    protected $request;
+    protected $queries = [];
+    protected $wheres = [];
+    protected $processedWheres = [];
+    protected $orders = [];
+    protected $limit = null;
+    protected $offset = null;
     protected $raw = false;
+    protected $throwExceptionsIfRaw = false;
     protected $paginate = false;
 
     protected $pageField;
@@ -28,30 +35,97 @@ class Builder
     protected $maxPerPage = '';
     protected $minPerPage = '';
 
+    protected $allowedOperands;
+    protected $defaultOperand;
 
-	public function __construct($resource)
-	{
-		$this->request = $resource->client->newRequest();
-		$this->resource = $resource;
+    protected $asForm = false;
+    protected $contentType = '';
+    protected $files = [];
+
+    public function __construct($resource)
+    {
+        $this->request = $resource->client->newRequest();
+        $this->resource = $resource;
         $this->prepare($resource);
-	}
+    }
 
     protected function prepare($resource)
     {
         $this->setPerPageField($resource->client->getPerPageField());
         $this->setPageField($resource->client->getPageField());
         $this->raw($resource->client->getRaw());
-        $this->paginate($resource->client->getPagination());
+        $this->withExceptions($resource->client->getThrowExceptionsIfRaw());
+        $this->setPaginate($resource->client->getPagination());
         if($this->shouldPaginate()){
-            $this->setPerPage($resource->client->getDefaultPaginationRecords());
+            $this->paginate($resource->client->getDefaultPaginationRecords());
         }
         $this->setMaxPerPage($resource->client->getMaxPaginationRecords());
         $this->setMinPerPage($resource->client->getMinPaginationRecords());
+
+        $this->setAllowedOperands($resource->client->getAllowedOperands());
+        $this->setDefaultOperand($resource->client->getDefaultOperand());
+    }
+
+    protected function setAllowedOperands(array $array)
+    {
+        $this->allowedOperands = $array;
+        return $this;
+    }
+
+    protected function getAllowedOperands()
+    {
+        return $this->allowedOperands;
+    }
+
+    protected function getOperandTranslation($operand)
+    {
+        switch ($operand) {
+            case '=':
+                return 'Equals';
+            case '!=':
+                return 'NotEquals';
+            case '>':
+                return 'GreaterThan';
+            case '>=':
+                return 'GreaterThanOrEquals';
+            case '<':
+                return 'LessThan';
+            case '<=':
+                return 'LessThanOrEquals';
+            case '<>':
+                return 'GreaterThanOrLessThan';
+            case 'like':
+                return 'Contains';
+            default:
+                return Str::studly($operand);
+        }
+    }
+
+    protected function operandAllowed($operand)
+    {
+        return in_array($operand, $this->getAllowedOperands());
+    }
+
+    protected function getDefaultOperand()
+    {
+        return $this->defaultOperand;
+    }
+
+    protected function setDefaultOperand($default)
+    {
+        $this->defaultOperand = $default;
+        return $this;
     }
 
     protected function setPerPageField($field)
     {
         $this->perPageField = $field;
+        return $this;
+    }
+
+    protected function setPageField($field)
+    {
+        $this->pageField = $field;
         return $this;
     }
 
@@ -67,16 +141,28 @@ class Builder
         return $this;
     }
 
-    protected function setPageField($field)
+    public function attachFile($key, $file, $filename="")
     {
-        $this->pageField = $field;
+        $this->files[$key] = ['file' => $file, 'filename' => $filename];
         return $this;
     }
 
-	protected function retreiveEndPoint($type="index")
-	{
-		return $this->resource->getEndPoint($type);
-	}
+    public function setContentType($type)
+    {
+        $this->contentType = $type;
+        return $this;
+    }
+
+    public function asForm($boolean = true)
+    {
+        $this->asForm = $boolean;
+        return $this;
+    }
+
+    protected function retreiveEndPoint($type="get")
+    {
+        return $this->resource->getEndPoint($type);
+    }
 
     protected function getApiDataField()
     {
@@ -85,172 +171,290 @@ class Builder
 
     public function find($id, $column="") 
     {
-    	if(is_array($id)){
-    		if($column == ''){
-	    		$column = $this->resource->getKeyName().'s';
-	    	}
-    		return $this->whereIn($id, $column);
-    	}
-    	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
-    	if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
-    		return $this->hydrate($response);
-    	} else if($response->getStatusCode() == 404) {
-            if($this->raw){
-                return $response;
-            }
-    		return null;
-    	} else {
-            return $response;
-    	}
+        if(is_array($id)){
+            return $this->whereIn($id, $column)->get(null, $raw);
+        }
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('find').'/'.$id,
+            $this->combineQueries()
+        ]), "individual", "allow");
+    }
+
+    public function findMany(array $id, $column="") 
+    {
+        return $this->whereIn($id, $column)->get();
     }
 
     public function findOrFail($id) 
     {
-    	$response = $this->request->get($this->retreiveEndPoint('show').$id, $this->combineQueries());
-    	if($response->ok()){
-            if($this->raw){
-                return $response;
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get').'/'.$id
+        ]), "individual", "error");
+    }
+
+    public function firstOrFail() 
+    {
+        if(!is_null($model = $this->first())){
+            return $model;
+        }
+        throw (new ModelNotFoundException)->setModel(get_class($this->resource));
+    }
+
+    protected function processHeaders() 
+    {
+        if($this->asForm){
+            $this->request->asForm();
+        }
+        if($this->contentType != ""){
+            $this->request->contentType($this->contentType);
+        }
+    }
+
+    protected function processFiles() 
+    {
+        if($this->files != []){
+            foreach($this->files as $key => $file){
+                $this->request->attach($key, $file['file'], $file['filename']);
             }
-    		return $this->hydrate($response);
-    	} else if($response->getStatusCode() == 404) {
-            if($this->raw){
-                return $response;
-            }
-    		return $response->throw();
-    	} else {
+        }
+    }
+
+    public function sendRequest($method, $attributes){
+        $this->processHeaders();
+        $this->processFiles();
+        return $this->request->$method(...$attributes);
+    }
+
+    public function handleResponse($response, $type="individual", $ifEmpty="default")
+    {
+        if($this->raw){
+            return $this->handleRaw($response);
+        } elseif($response->successful()){
+            return $this->{'process'.Str::studly($type).'Response'}($response);
+        } elseif($response->getStatusCode() == 404){
+            return $this->handle404($response, $ifEmpty);
+        } else {
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
+        }
+    }
+
+    public function handleRaw($response) 
+    {
+        if(!$this->throwExceptionsIfRaw){
             return $response;
-    	}
+        } elseif($response->successful()){
+            return $response;
+        } else {
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
+        }
+    }
+
+    public function handle404($response, $ifEmpty) 
+    {
+        if($ifEmpty == 'allow'){
+            return null;
+        } elseif($ifEmpty == 'error'){
+            return $response->throw();
+        } else {
+            throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
+        }
     }
 
     public function all() 
     {
-    	$response = $this->request->get($this->retreiveEndPoint('index'), $this->addPagination($this->combineQueries()));
-    	if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
-    		return $this->processAllResultSet($response);
-    	} else {
-            return $response;
-    	}
+        $this->setPerPageToMax();
+        if($this->resource->beforeQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get'),
+            $this->addPagination($this->combineQueries()),
+        ]), 'all');
+        
     }
 
     public function get()
     {
-    	if($this->data != null){
-    		return $this->data;
-    	}
-    	$response = $this->request->get($this->retreiveEndPoint(), $this->addPagination($this->combineQueries()));
-    	if($response->ok()){
-            if($this->raw){
-                return $response;
-            }
-    		return $this->data = $this->processResultSet($response);
-    	} else {
-    		return $response;
-    	}
+        if($this->resource->beforeQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get'),
+            $this->addPagination($this->combineQueries())
+        ]), 'get');
     }
 
-    public function post($attributes)
+    public function getOne()
     {
-    	$response = $this->request->post($this->retreiveEndPoint('create'), $attributes, $this->combineQueries());
-    	if($response->successful()){
-            if($this->raw){
-                return $response;
-            }
-    		return $this->hydrate($response, false);
-    	} else {
-            if($this->raw){
-                return $response;
-            }
-            return $this->update(['status_code' => $response->status(), 'response' => $response]);
-    	}
+        if($this->resource->beforeQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('get', [
+            $this->retreiveEndPoint('get'),
+            $this->addPagination($this->combineQueries())
+        ]), 'individual');
     }
 
-    public function patch($attributes)
+    public function post($attributes, $type="individual")
     {
-    	$response = $this->request->patch($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
-    	if($response->successful()){
-            if($this->raw){
-                return $response;
-            }
-    		return $this->hydrate($response, false);
-    	} else {
-            if($this->raw){
-                return $response;
-            }
-            return $this->update(['status_code' => $response->status(), 'response' => $response]);
-    	}
+        if($this->resource->beforePostQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('post', [
+            $this->retreiveEndPoint('post'),
+            $attributes,
+            $this->combineQueries()
+        ]), $type);
     }
 
-    public function put($attributes)
+    public function patch($attributes, $type="individual")
     {
-    	$response = $this->request->put($this->retreiveEndPoint('update'), $attributes, $this->combineQueries());
-    	if($response->successful()){
-            if($this->raw){
-                return $response;
-            }
-    		return $this->hydrate($response, false);
-    	} else {
-            if($this->raw){
-                return $response;
-            }
-    		return $this->update(['status_code' => $response->status(), 'response' => $response]);
-    	}
+        if($this->resource->beforePatchQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('patch', [
+            $this->retreiveEndPoint('patch'),
+            $attributes,
+            $this->combineQueries()
+        ]), $type);
     }
 
-    public function delete() 
+    public function put($attributes, $type="individual")
     {
-    	return $this->request->delete($this->retreiveEndPoint('delete'), $this->combineQueries());
+        if($this->resource->beforePutQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('put', [
+            $this->retreiveEndPoint('put'),
+            $attributes,
+            $this->combineQueries()
+        ]), $type);
+    }
+
+    public function delete($type="individual") 
+    {
+        if($this->resource->beforeDeleteQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('delete', [
+            $this->retreiveEndPoint('delete'),
+            $this->combineQueries()
+        ]), $type);
     }
 
     public function first()
     {
-    	return $this->get()->first();
+        return $this->get()->first();
     }
 
-    public function firstWhere($column, $value)
+    public function last()
     {
-    	$this->where($column, $value);
-    	return $this->first();
+        return $this->get()->last();
+    }
+
+    public function firstWhere($column, $operand = null, $value = null)
+    {
+        $this->where($column, $operand, $value);
+        return $this->first();
+    }
+
+    public function addQuery($key, $value)
+    {
+        $this->queries[$key] = $value;
+        return $this;
+    }
+
+    public function whereRaw($column, $value) 
+    {
+        $this->addQuery($column, $value);
+        return $this;
     }
     
-    public function where($column, $value)
+    public function where($column, $operand = null, $value = null)
     {
-    	if($this->data != null){
-    		$this->data = null;
-    	}
-        $this->queries[$column] = $value;
-
+        if(is_array($column)){
+            foreach($column as $query){
+                $this->where(...$query);
+            }
+        } else {
+            if($value == null){
+                $value = $operand;
+                $operand = $this->getDefaultOperand();
+            }
+            $this->addWhere($column, $operand, $value);
+        }
         return $this;
+    }
+
+    protected function addWhere($column, $operand, $value){
+        if($this->operandAllowed($operand)){
+            $function = 'addWhere'.$this->getOperandTranslation($operand);
+            $this->$function($column, $operand, $value);
+        }
+    }
+
+    protected function addWhereEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereNotEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereGreaterThan($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereGreaterThanOrEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereLessThan($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereLessThanOrEquals($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereGreaterThanOrLessThan($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
+    }
+
+    protected function addWhereContains($column, $operand, $value)
+    {
+        $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
     }
 
     public function whereIn(array $values, $column="") 
     {
-    	$string = implode(',', $values);
-    	return $this->where($column, $string)->get();
+        $string = implode(',', $values);
+        if($column == ''){
+            $column = $this->resource->getKeyName().'s';
+        }
+        $this->addQuery($column, $string);
+        return $this;
     }
 
     public function orderBy($value, $column='order') 
     {
-    	$this->orders[$column] = $value;
-    	return $this;
+        $this->orders[$column] = $value;
+        return $this;
     }
 
     public function count() 
     {
-    	if(isset($this->data)){
-    		return $this->data->count();
-    	} else {
-    		$this->data = $this->get();
-    	}
-    	return $this->data->count();
+        return $this->get()->count();
     }
 
-    public function paginate($status=true) 
+    public function setPaginate($status=true) 
     {
         $this->paginate = $status;
         return $this;
@@ -271,10 +475,39 @@ class Builder
         return $this->perPage;
     }
 
+    public function paginate($perPage, $page = null)
+    {
+        $this->setPaginate(true);
+        $this->setPerPage($perPage);
+        if($page != null){
+            $this->setPage($page);
+        }
+        return $this;
+    }
+
     public function setPerPage($perPage)
     {
-
+        if($this->maxPerPage != '' && $this->minPerPage > $perPage){
+            $perPage = $this->minPerPage;
+        }
+        if($this->maxPerPage != '' && $this->maxPerPage < $perPage){
+            $perPage = $this->maxPerPage;
+        }
         $this->perPage = $perPage;
+
+        return $this;
+    }
+
+    public function setPerPageToMax()
+    {
+        $this->perPage = $this->maxPerPage;
+
+        return $this;
+    }
+
+    public function setPerPageToMin()
+    {
+        $this->perPage = $this->minPerPage;
 
         return $this;
     }
@@ -292,14 +525,80 @@ class Builder
         return $this;
     }
 
+    public function withExceptions($status=true) 
+    {
+        $this->throwExceptionsIfRaw = $status;
+        return $this;
+    }
+
     public function isRaw()
     {
         return $this->raw;
     }
 
-    public function combineQueries() 
+    protected function combineQueries() 
     {
-        return array_merge($this->queries, $this->orders);
+        return array_merge($this->processQueries(), $this->processOrders());
+    }
+
+    protected function processQueries()
+    {
+        $this->processWheres();
+        return array_merge($this->queries, $this->processedWheres);
+    }
+
+    protected function processWheres()
+    {
+        foreach($this->wheres as $detail){
+            $function = 'ProcessWhere'.$this->getOperandTranslation($detail['operand']);
+            $this->$function($detail);
+        }
+        return $this;
+    }
+
+    public function processWhereEquals($detail) 
+    {
+        $this->processedWheres[$detail['column']] = $detail['value'];
+    }
+
+    public function processWhereNotEquals($detail) 
+    {
+        $this->processedWheres[$detail['column']] = '-'.$detail['value'];
+    }
+
+    protected function processWhereGreaterThan($detail)
+    {
+        $this->processedWheres[$detail['column']] = '>'.$detail['value'];
+    }
+
+    protected function processWhereGreaterThanOrEquals($detail)
+    {
+        $this->processedWheres[$detail['column']] = '>='.$detail['value'];
+    }
+
+    protected function processWhereLessThan($detail)
+    {
+        $this->processedWheres[$detail['column']] = '<'.$detail['value'];
+    }
+
+    protected function processWhereLessThanOrEquals($detail)
+    {
+        $this->processedWheres[$detail['column']] = '<='.$detail['value'];
+    }
+
+    protected function processWhereGreaterThanOrLessThan($detail)
+    {
+        $this->processedWheres[$detail['column']] = '<>'.$detail['value'];
+    }
+
+    protected function processWhereContains($detail)
+    {
+        $this->processedWheres[$detail['column']] = '%'.$detail['value'].'%';
+    }
+
+    protected function processOrders()
+    {
+        return $this->orders;
     }
 
     public function addPagination($array) 
@@ -315,72 +614,67 @@ class Builder
 
     public function reset()
     {
-    	$this->resetQueries();
-    	$this->resetOrders();
-    	$this->resetData();
-    	$this->resetLimit();
-    	$this->resetOffset();
-    	return $this;
-    }
-
-    public function resetData()
-    {
-    	$this->data = null;
-    	return $this;
+        $this->resetQueries();
+        $this->resetOrders();
+        $this->resetLimit();
+        $this->resetOffset();
+        return $this;
     }
 
     public function resetLimit()
     {
-    	$this->limit = null;
-    	return $this;
+        $this->limit = null;
+        return $this;
     }
 
     public function resetOffset()
     {
-    	$this->offset = null;
-    	return $this;
+        $this->offset = null;
+        return $this;
     }
 
     public function resetQueries()
     {
-    	$this->queries = [];
-    	$this->resetData();
-    	return $this;
+        $this->queries = [];
+        $this->wheres = [];
+        $this->processedWheres = [];
+        $this->resetData();
+        return $this;
     }
 
     public function resetOrders()
     {
-    	$this->orders = [];
-    	return $this;
+        $this->orders = [];
+        return $this;
     }
     
-    protected function processResultSet($response)
+    protected function processGetResponse($response)
     {
-    	return new ResultSet($this, $response, $this->resource);
+        return new ResultSet($this, $response, $this->resource);
     }
 
-    protected function processAllResultSet($response)
+    protected function processAllResponse($response)
     {
         return new ResultSet($this, $response, $this->resource, true);
     }
 
-    protected function hydrate($response, $fresh=true)
+    protected function processIndividualResponse($response)
     {
-        if($fresh){
-            return $this->create($response->json()[$this->getApiDataField()]);
+        if($this->getApiDataField() != null){
+            $data = $response->json()[$this->getApiDataField()];
         } else {
-            return $this->update($response->json()[$this->getApiDataField()]);
+            $data = $response->json();
+        }
+        if(isset($data[0])){
+            return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
+        } else {
+            return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
         }
     }
 
-	protected function create($array)
-    {        
-    	return $this->resource->fresh()->fill($array);
-    }
-
-    protected function update($array)
+    public function prepareHttpErrorMessage($response)
     {
-        return $this->resource->fill($array);
+        return $response->json()['message'];
     }
 
 }

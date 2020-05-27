@@ -5,10 +5,11 @@ namespace MacsiDigital\API\Support;
 use BadMethodCallException;
 use Illuminate\Support\Str;
 use MacsiDigital\API\Facades\Client;
+use MacsiDigital\API\Support\Builder;
 use MacsiDigital\API\Facades\ClientContract;
-use MacsiDigital\API\Exceptions\NodeNotFoundException;
 use MacsiDigital\API\Exceptions\NoClientSetException;
 use MacsiDigital\API\Contracts\Entry as EntryContract;
+use MacsiDigital\API\Exceptions\NodeNotFoundException;
 
 abstract class Entry implements EntryContract
 {
@@ -25,6 +26,9 @@ abstract class Entry implements EntryContract
     // Should return raw responses and not models/resultsets
     protected $raw = false;
 
+    // Shoule we throw exceptions in cases where a server error occurs
+    protected $throwExceptionsIfRaw = false;
+
     // Should results be paginated by default.
     protected $pagination = true;
 
@@ -40,13 +44,17 @@ abstract class Entry implements EntryContract
     // for unlimited queries. This of course will eat up any rate limits
     protected $maxQueries = '5';
 
-    // Most API's should include pagination data - this is the fields we should be looking
-    // in on the response to get htis information.  We can use start names or dot notation,
+    // Most API's should include pagination data - this is the fields we should be looking for
+    // in the response to get this information.  We can use names or dot notation,
     // so for exmple 'current_page' or 'meta.current_page'
     protected $resultsPageField = 'meta.current_page';
     protected $resultsTotalPagesField = 'meta.last_page';
     protected $resultsPageSizeField = 'meta.per_page';
     protected $resultsTotalRecordsField = 'meta.total';
+
+    // What operands are allowed when filtering
+    protected $allowedOperands = ['=', '!=', '<', '>', '<=', '>=', '<>', 'like'];
+    protected $defaultOperand = '=';
 
     public static function __callStatic($method, $parameters)
     {
@@ -71,6 +79,11 @@ abstract class Entry implements EntryContract
     public function __get($key)
     {
         return $this->getNode($key);
+    }
+
+    public function getBuilderClass() 
+    {
+        return Builder::class;
     }
 
     public function getNode($key)
@@ -116,6 +129,16 @@ abstract class Entry implements EntryContract
         return $this->pageField;   
     }
 
+    public function getAllowedOperands()
+    {
+        return $this->allowedOperands;
+    }
+
+    public function getDefaultOperand()
+    {
+        return $this->defaultOperand;
+    }
+
     public function getDefaultPaginationRecords()
     {
         if($this->defaultPaginationRecords == '')
@@ -151,6 +174,11 @@ abstract class Entry implements EntryContract
     public function getRaw()
     {
         return $this->raw;    
+    }
+
+    public function getThrowExceptionsIfRaw()
+    {
+        return $this->throwExceptionsIfRaw;    
     }
 
     public function hasMaxQueryLimit() 

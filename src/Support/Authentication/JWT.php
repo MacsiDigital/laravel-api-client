@@ -6,11 +6,13 @@ use Firebase\JWT\JWT as FirebaseJWT;
 
 class JWT
 {
-    protected $options;
-
-    public static function token($token, $secret)
+    public static function generateToken($token, $secret)
     {
         return FirebaseJWT::encode($token, $secret);
+    }
 
+    public static function decodeToken($jwt, $secret)
+    {
+        return FirebaseJWT::decode($jwt, $secret, array('HS256'));
     }
 }

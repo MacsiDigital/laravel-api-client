@@ -13,7 +13,7 @@ class Api extends Entry
     {
         $this->setConfig();
         
-        return Client::baseUrl(config('api.baseUrl'))->withOptions(config('api.options'));
+        return Client::baseUrl(config('api.base_url'))->withOptions(config('api.options'));
     }
 
     public function setConfig() 

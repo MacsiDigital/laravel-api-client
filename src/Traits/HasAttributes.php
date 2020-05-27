@@ -4,13 +4,25 @@ namespace MacsiDigital\API\Traits;
 
 use LogicException;
 use Illuminate\Support\Str;
-use Illuminate\Support\Collection;
 use MacsiDigital\API\Contracts\Relation;
+use MacsiDigital\API\Exceptions\JsonEncodingException;
 use Illuminate\Database\Eloquent\Concerns\HasAttributes as LaravelHasAttributes;
 
 trait HasAttributes
 {
     use LaravelHasAttributes;
+
+    protected $updateOnlyDirty = true;
+
+    public function hasKey()
+    {
+        return false;
+    }
+
+    public function updatesOnlyDirty()
+    {
+        return $this->updateOnlyDirty;
+    }
 
     public function make(array $attributes)
     {
@@ -40,25 +52,21 @@ trait HasAttributes
         return $this->dates;
     }
 
-    /**
+     /**
      * Set a given attribute on the model.
      *
      * @param  string  $key
      * @param  mixed  $value
-     * @return mixed
+     * @return $this
      */
     public function setAttribute($key, $value)
     {
         if(is_array($value) || is_object($value)){
-            if($this->relationLoaded($key)){
-                $this->updateRelationAttribute($key, $value);
-                return $this;
-            } elseif($this->relationLoaded(Str::plural($key))){
-                $this->updateRelationAttribute(Str::plural($key), $value);
-                return $this;
-            } elseif($this->relationLoaded(Str::singular($key))){
-                $this->updateRelationAttribute(Str::singular($key), $value);
-                return $this;
+            if(method_exists($this, 'setRelation')){
+                if($this->relationLoaded($key)){
+                    $this->updateRelationAttribute($key, $value);
+                    return $this;
+                }    
             }
         }
         // First we will check for the presence of a mutator for the set operation
@@ -75,12 +83,6 @@ trait HasAttributes
             $value = $this->fromDateTime($value);
         }
 
-        if ($this->isClassCastable($key)) {
-            $this->setClassCastableAttribute($key, $value);
-
-            return $this;
-        }
-
         if ($this->isJsonCastable($key) && ! is_null($value)) {
             $value = $this->castAttributeAsJson($key, $value);
         }
@@ -94,7 +96,7 @@ trait HasAttributes
 
         $this->attributes[$key] = $value;
 
-        if(is_array($value)){
+        if(is_array($value) && method_exists($this, 'setRelation')){
             $this->setRelationAttribute($key, $value);
         }
 
@@ -106,12 +108,15 @@ trait HasAttributes
         if($this->loadRaw || in_array($key, $this->dontAutoloadRelation)){
             return;
         }
-        if ($this->isRelationship($key)){
-            $function = $key;
-        } elseif ($this->isRelationship(Str::plural($key))) {
-            $function = Str::plural($key);
-        } elseif ($this->isRelationship(Str::singular($key))) {
-            $function = Str::singular($key);
+        if(static::$snakeAttributes){
+            $tempKey = Str::camel($key);
+        } else {
+            $tempKey = $key;
+        }
+        if ($this->isRelationship($tempKey)){
+            $function = $tempKey;
+        } elseif ($this->isRelationship(Str::plural($tempKey))) {
+            $function = Str::plural($tempKey);
         }
         if(isset($function)){
             $this->$function();
@@ -123,14 +128,16 @@ trait HasAttributes
         if($this->loadRaw || in_array($key, $this->dontAutoloadRelation)){
             return;
         }
+        
         if ($this->isRelationship($key)){
-            
+            $this->getRelation($key)->update($value);
         } elseif ($this->isRelationship(Str::plural($key))) {
             $key = Str::plural($key);
+            $this->getRelation($key)->update($value);
         } elseif ($this->isRelationship(Str::singular($key))) {
-            $key = Str::plural($key);
+            $key = Str::singular($key);
+            $this->getRelation($key)->update($value);
         }
-        $this->getRelation($key)->update($value);
     }
 
     public function getAttribute($key)
@@ -139,23 +146,21 @@ trait HasAttributes
             return;
         }
         
+        // need to check for a relationship first - otherwise we will be passing back the 
+        // array if relationship is passed as attributes in the API call
+        if(method_exists($this, 'setRelation') && $this->isRelationship($key)){
+            return $this->getRelationValue($key);
+        }
+
         // If the attribute exists in the attribute array or has a "get" mutator we will
         // get the attribute's value. Otherwise, we will proceed as if the developers
         // are asking for a relationship's value. This covers both types of values.
-        if (array_key_exists($key, $this->getAttributes()) ||
-            $this->hasGetMutator($key) ||
-            $this->isClassCastable($key)) {
-            return $this->getAttributeValue($key);
+        if (array_key_exists($key, $this->attributes) ||
+            $this->hasGetMutator($key)) {
+               return $this->getAttributeValue($key);
         }
 
-        // Here we will determine if the model base class itself contains this given key
-        // since we don't want to treat any of those methods as relationships because
-        // they are all intended as helper methods and none of these are relations.
-        if (method_exists(self::class, $key)) {
-            return;
-        }
-        // We still need to keep this method as the array key will not exist when relationship loaded
-        return $this->getRelationValue($key);
+        return;
     }
 
     /**
@@ -166,13 +171,13 @@ trait HasAttributes
      */
     public function getRelationValue($key)
     {
+
         // If the key already exists in the relationships array, it just means the
         // relationship has already been loaded, so we'll just return it out of
         // here because there is no need to query within the relations twice.
         if ($this->relationLoaded($key)) {
             return $this->getRelation($key)->getResults();
         }
-
         // If the "attribute" exists as a method on the model, we will just assume
         // it is a relationship and will load and return results from the query
         // and hydrate the relationship's value on the "relationships" array.
@@ -205,19 +210,18 @@ trait HasAttributes
             ));
         }
 
-        $this->setRelation($method, $relation);
-
-        $relation->getResults();
+        return tap($relation->getResults(), function ($results) use ($method) {
+            $this->setRelation($method, $results);
+        });
     }
 
-    public function package() 
+    /**
+     * Get the format for database stored dates.
+     *
+     * @return string
+     */
+    protected function getDateFormat()
     {
-        $class = new static($this->client);
-        $class->loadRaw = true;
-        $class->fill($this->getAttributes());
-        foreach($this->relations as $key => $relation){
-            $class->$key = $relation->getResults()->toArray();
-        }
-        return $class;
+        return $this->dateFormat ?: 'Y-m-d H:i:s';
     }
 }

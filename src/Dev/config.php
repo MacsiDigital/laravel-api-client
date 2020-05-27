@@ -2,7 +2,7 @@
 
 return [
 	'api' => [
-		'baseUrl' => 'http://playground.test/api/',
+		'base_url' => 'http://playground.test/api/',
 		'options' => [
 
 		]
