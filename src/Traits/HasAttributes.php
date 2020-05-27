@@ -69,6 +69,7 @@ trait HasAttributes
                 }    
             }
         }
+
         // First we will check for the presence of a mutator for the set operation
         // which simply lets the developers tweak the attribute as it is set on
         // the model, such as "json_encoding" an listing of data for storage.
@@ -81,6 +82,12 @@ trait HasAttributes
         // the connection grammar's date format. We will auto set the values.
         elseif ($value && $this->isDateAttribute($key)) {
             $value = $this->fromDateTime($value);
+        }
+
+        if ($this->isClassCastable($key)) {
+            $this->setClassCastableAttribute($key, $value);
+
+            return $this;
         }
 
         if ($this->isJsonCastable($key) && ! is_null($value)) {
@@ -156,8 +163,10 @@ trait HasAttributes
         // get the attribute's value. Otherwise, we will proceed as if the developers
         // are asking for a relationship's value. This covers both types of values.
         if (array_key_exists($key, $this->attributes) ||
-            $this->hasGetMutator($key)) {
-               return $this->getAttributeValue($key);
+            array_key_exists($key, $this->casts) ||
+            $this->hasGetMutator($key) ||
+            $this->isClassCastable($key)) {
+            return $this->getAttributeValue($key);
         }
 
         return;
@@ -224,4 +233,5 @@ trait HasAttributes
     {
         return $this->dateFormat ?: 'Y-m-d H:i:s';
     }
+    
 }

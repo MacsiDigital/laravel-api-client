@@ -21,7 +21,7 @@ class APIServiceProvider extends ServiceProvider
     public function register()
     {
         // Register the main class to use with the facade
-        $this->app->bind('api.client', 'MacsiDigital\API\Support\Factory');
+        $this->app->bind('api.client', 'Illuminate\Http\Client\Factory');
 
         // $this->app->bind(Entry::class, function ($app) {
         //     return new Entry();
