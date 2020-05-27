@@ -2,16 +2,16 @@
 
 namespace MacsiDigital\API\Dev;
 
-use MacsiDigital\API\Support\ApiResource;
+use MacsiDigital\API\Support\Resource;
 
-class User extends ApiResource
+class User extends Resource
 {
 	protected $storeResource = 'MacsiDigital\API\Dev\Resources\StoreUser';
     protected $updateResource = 'MacsiDigital\API\Dev\Resources\UpdateUser';
 
-    public function addresses() 
+    public function address() 
     {
-    	return $this->hasMany(Address::class);
+    	return $this->hasOne(Address::class);
     }
-
+    
 }

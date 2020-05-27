@@ -10,22 +10,24 @@ class BelongsTo extends Relation
 {
     protected $relation;
 
-    public function __construct($related, $owner, $name, $field)
+    public $type = 'BelongsTo';
+
+    public function __construct($related, $owner, $name, $field, $updateFields = [])
     {
+        $this->relatedClass = $related;
         $this->related = new $related($owner->client);
         $this->owner = $owner;
         $this->name = $name;
         $this->field = $field;
-        $this->hydrate($data);
     }
 
     protected function hydrate($data) 
     {
-    	if($data != []){
-    		$this->relation = $this->fill($data);
-    	} else {
-    		$this->relation = $this->related->fresh();
-    	} 
+        if($data != []){
+            $this->relation = $this->related->newFromBuilder($data);
+        } else {
+            $this->relation = $this->related->newInstance();
+        } 
     }
 
     public function getResults()
@@ -37,6 +39,16 @@ class BelongsTo extends Relation
     	} else {
     		return $this->relation;
     	}
+    }
+
+    public function associate($object) 
+    {
+        
+    }
+
+    public function dissociate() 
+    {
+        
     }
 
 }

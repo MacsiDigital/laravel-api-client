@@ -5,6 +5,7 @@ namespace MacsiDigital\API\Traits;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
+use MacsiDigital\API\Support\ApiResource;
 use MacsiDigital\API\Support\Relations\HasOne;
 use MacsiDigital\API\Support\Relations\HasMany;
 use MacsiDigital\API\Support\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use MacsiDigital\API\Support\Relations\BelongsToMany;
 
 trait HasRelationships
 {
+    protected $IdSuffix = '_id';
     
     protected $relations = [];
 
@@ -27,45 +29,79 @@ trait HasRelationships
         if($name == ''){
             $name = debug_backtrace()[2]['function'];
         }
+        if(static::$snakeAttributes){
+            $name = Str::snake($name);
+        } else {
+            $name = Str::studly($name);
+        }
         return $name;
     }
 
-    protected function resolveRelationField($field, $name) 
+    protected function resolveRelationField($related, $field, $name) 
     {
-        if($field == ''){
-            $field = $name.'_id';
+        if(method_exists($related, 'getRelations')){
+            if($field == ''){
+                $field = Str::singular($name).$this->IdSuffix;
+            }
+            if(static::$snakeAttributes){
+                $field = Str::snake($field);
+            } else {
+                $field = Str::studly($field);
+            }
+            return $field;
+        } else {
+            return;
         }
-        return $field;
     }
 
-    public function hasOne($related, $name="", $field="")
+    public function hasOne($related, $name="", $field="", $updateFields = [])
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){
-            $field = $this->resolveRelationField($field, $this->getModelName());
-            $this->setRelation($name, new HasOne($related, $this, $name, $field));
+            $field = $this->resolveRelationField($related, $field, $this->getModelName());
+            $this->setRelation($name, new HasOne($related, $this, $name, $field, $updateFields));
         }
         return $this->getRelation($name);
     }
 
-    public function belongsTo($related, $name="", $field="")
+    public function belongsTo($related, $name="", $field="", $updateFields = [])
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){
-            $field = $this->resolveRelationField($field, $name);
-            $this->setRelation($name, new BelongsTo($related, $this, $name, $field));
+            $field = $this->resolveRelationField($related, $field, $name);
+            $this->setRelation($name, new BelongsTo($related, $this, $name, $field, $updateFields));
         }
         return $this->getRelation($name);
     }
 
-    public function hasMany($related, $name="", $field="")
+    public function hasMany($related, $name="", $field="", $updateFields = [])
     {
         $name = $this->resolveRelationName($name);
         if(!$this->relationLoaded($name)){
-            $field = $this->resolveRelationField($field, $name);
-            $this->setRelation($name, new HasMany($related, $this, $name, $field));
+            $field = $this->resolveRelationField($related, $field, $this->getModelName());
+            $this->setRelation($name, new HasMany($related, $this, $name, $field, $updateFields));
         }
         return $this->getRelation($name);
+    }
+
+    public function hasCustom($related, $class, $name="", $field="", $updateFields = [])
+    {
+        $name = $this->resolveRelationName($name);
+        if(!$this->relationLoaded($name)){
+            $field = $this->resolveRelationField($related, $field, $this->getModelName());
+            $this->setRelation($name, new $class($related, $this, $name, $field, $updateFields));
+        }
+        return $this->getRelation($name);
+    }
+
+    public function has($relationship) 
+    {
+        // Need to check if relationship exists
+    }
+
+    public function doesntHave($relationship) 
+    {
+        // Need to check if relationship exists
     }
 
     public function belongsToMany($related, $name="", $field="")
@@ -182,7 +218,9 @@ trait HasRelationships
 
     public function isRelationship($key) 
     {
-        return method_exists($this, $key);
+        if(method_exists($this, $key) || method_exists($this, Str::studly($key)) || method_exists($this, Str::snake($key))){
+            return true;
+        }
     }
 
 }
