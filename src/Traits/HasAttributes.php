@@ -212,25 +212,22 @@ trait HasAttributes
         if (! $key) {
             return;
         }
+        
+        // need to check for a relationship first - otherwise we will be passing back the 
+        // array if relationship is passed as attributes in the API call
+        if(method_exists($this, 'setRelation') && $this->isRelationship($key)){
+            return $this->getRelationValue($key);
+        }
 
         // If the attribute exists in the attribute array or has a "get" mutator we will
         // get the attribute's value. Otherwise, we will proceed as if the developers
         // are asking for a relationship's value. This covers both types of values.
         if (array_key_exists($key, $this->attributes) ||
             $this->hasGetMutator($key)) {
-            return $this->getAttributeValue($key);
+               return $this->getAttributeValue($key);
         }
 
-        // Here we will determine if the model base class itself contains this given key
-        // since we don't want to treat any of those methods as relationships because
-        // they are all intended as helper methods and none of these are relations.
-        if (method_exists(self::class, $key)) {
-            return;
-        }
-
-        if(method_exists($this, 'setRelation')){
-            return $this->getRelationValue($key);
-        }
+        return;
     }
 
     /**
@@ -247,7 +244,6 @@ trait HasAttributes
         if ($this->relationLoaded($key)) {
             return $this->getRelation($key)->getResults();
         }
-
         // If the "attribute" exists as a method on the model, we will just assume
         // it is a relationship and will load and return results from the query
         // and hydrate the relationship's value on the "relationships" array.
@@ -866,8 +862,6 @@ trait HasAttributes
     {
         return $date->format($this->getDateFormat());
     }
-
-    
 
     /**
      * Set the date format used by the model.

@@ -2,6 +2,10 @@
 
 All notable changes to `laravel-api-client` will be documented in this file
 
+## 1.0.12 - 2020-05-27
+
+- Updates to many things.
+
 ## 1.0.11 - 2020-05-18
 
 - Initial Public Release

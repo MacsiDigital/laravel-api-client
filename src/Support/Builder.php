@@ -175,7 +175,8 @@ class Builder
             return $this->whereIn($id, $column)->get(null, $raw);
         }
         return $this->handleResponse($this->sendRequest('get', [
-            $this->retreiveEndPoint('find').'/'.$id
+            $this->retreiveEndPoint('find').'/'.$id,
+            $this->combineQueries()
         ]), "individual", "allow");
     }
 
@@ -262,15 +263,21 @@ class Builder
     public function all() 
     {
         $this->setPerPageToMax();
+        if($this->resource->beforeQuery($this) === false){
+            return;
+        }
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get'),
-            $this->addPagination([]),
+            $this->addPagination($this->combineQueries()),
         ]), 'all');
         
     }
 
     public function get()
     {
+        if($this->resource->beforeQuery($this) === false){
+            return;
+        }
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get'),
             $this->addPagination($this->combineQueries())
@@ -279,45 +286,60 @@ class Builder
 
     public function getOne()
     {
+        if($this->resource->beforeQuery($this) === false){
+            return;
+        }
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get'),
             $this->addPagination($this->combineQueries())
         ]), 'individual');
     }
 
-    public function post($attributes)
+    public function post($attributes, $type="individual")
     {
+        if($this->resource->beforePostQuery($this) === false){
+            return;
+        }
         return $this->handleResponse($this->sendRequest('post', [
             $this->retreiveEndPoint('post'),
             $attributes,
             $this->combineQueries()
-        ]));
+        ]), $type);
     }
 
-    public function patch($attributes)
+    public function patch($attributes, $type="individual")
     {
+        if($this->resource->beforePatchQuery($this) === false){
+            return;
+        }
         return $this->handleResponse($this->sendRequest('patch', [
             $this->retreiveEndPoint('patch'),
             $attributes,
             $this->combineQueries()
-        ]));
+        ]), $type);
     }
 
-    public function put($attributes)
+    public function put($attributes, $type="individual")
     {
+        if($this->resource->beforePutQuery($this) === false){
+            return;
+        }
         return $this->handleResponse($this->sendRequest('put', [
             $this->retreiveEndPoint('put'),
             $attributes,
             $this->combineQueries()
-        ]));
+        ]), $type);
     }
 
-    public function delete() 
+    public function delete($type="individual") 
     {
-        return $this->handleResponse($this->sendRequest('post', [
-            $this->retreiveEndPoint('post'),
+        if($this->resource->beforeDeleteQuery($this) === false){
+            return;
+        }
+        return $this->handleResponse($this->sendRequest('delete', [
+            $this->retreiveEndPoint('delete'),
             $this->combineQueries()
-        ]));
+        ]), $type);
     }
 
     public function first()
@@ -325,15 +347,27 @@ class Builder
         return $this->get()->first();
     }
 
-    public function firstWhere($column, $value)
+    public function last()
     {
-        $this->where($column, $value);
+        return $this->get()->last();
+    }
+
+    public function firstWhere($column, $operand = null, $value = null)
+    {
+        $this->where($column, $operand, $value);
         return $this->first();
+    }
+
+    public function addQuery($key, $value)
+    {
+        $this->queries[$key] = $value;
+        return $this;
     }
 
     public function whereRaw($column, $value) 
     {
-        $this->queries[$column] = $value;
+        $this->addQuery($column, $value);
+        return $this;
     }
     
     public function where($column, $operand = null, $value = null)
@@ -405,7 +439,8 @@ class Builder
         if($column == ''){
             $column = $this->resource->getKeyName().'s';
         }
-        return $this->queries($column, $string);
+        $this->addQuery($column, $string);
+        return $this;
     }
 
     public function orderBy($value, $column='order') 
@@ -631,9 +666,9 @@ class Builder
             $data = $response->json();
         }
         if(isset($data[0])){
-            return $this->resource->newFromBuilder($data[0]);
+            return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
         } else {
-            return $this->resource->newFromBuilder($data);
+            return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
         }
     }
 

@@ -17,6 +17,7 @@ abstract class Relation implements RelationContract
 	protected $relatedClass;
     protected $name;
     protected $relation;
+    protected $updateFields;
 
     public function newRelation($data=[])
     {
@@ -49,7 +50,7 @@ abstract class Relation implements RelationContract
      */
     public function __call($method, $parameters)
     {      
-        return $this->forwardCallTo($this->newInstance(), $method, $parameters);
+        return $this->forwardCallTo($this->newRelation(), $method, $parameters);
     }
 
 }

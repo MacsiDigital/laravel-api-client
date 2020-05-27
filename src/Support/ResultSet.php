@@ -58,7 +58,9 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 		$this->builder->raw();
 		$this->processResponse($response);
-		$this->processRecordSweep();
+		if($this->items->count() > 0){
+			$this->processRecordSweep();
+		}
 	}
 
 	public function setMaxQueries($amount)
@@ -115,7 +117,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 			return $this;
 		} else{
 			foreach($array[$this->resource->getApiMultipleDataField()] as $object){
-				$this->items->push($this->resource->newFromBuilder($object));
+				$this->items->push($this->resource->newFromBuilder($this->resource->passOnAttributes($object)));
 				$this->incrementTotalDownloads();
 			}
 		}

@@ -51,6 +51,36 @@ trait InteractsWithAPI
     // Also, some API's return 'users' for multiple and user for single, set teh multiple field below to wheat is required if different
     protected $apiMultipleDataField = 'data';
 
+    public $passOnKeys = [];
+
+    public function setPassOnAttributes(array $keys) 
+    {
+        $this->passOnKeys = $keys;
+        return $this;
+    }
+
+    public function hasPassOnAttributes()
+    {
+        return $this->passOnKeys != [];
+    }
+
+    public function passOnAttributes($item)
+    {
+        foreach($this->passOnKeys as $key)
+        {
+            if(is_object($item)){
+                if(!isset($item->$key)){
+                    $item->$key = $this->$key;
+                }
+            } elseif (is_array($item)){
+                if(!isset($item[$key])){
+                    $item[$key] = $this->$key;
+                }
+            }
+        }
+        return $item;
+    }
+
     public function query()
     {
         $class = $this->client->getBuilderClass();
@@ -291,7 +321,13 @@ trait InteractsWithAPI
     {
         $query = $this->newQuery();
 
-        $this->beforeSave($options);
+        // If the "beforeSave" function returns false we'll bail out of the save and return
+        // false, indicating that the save failed. This provides a chance for any
+        // listeners to cancel save operations if validations fail or whatever.
+        if($this->beforeSave($options, $query) === false){
+            return;
+        }
+
         // If the model already exists in the database we can just update our record
         // that is already in this database using the current IDs in this "where"
         // clause to only update this model. Otherwise, we'll just insert them.
@@ -310,7 +346,7 @@ trait InteractsWithAPI
         // that is done. We will call the "saved" method here to run any actions
         // we need to happen after a model gets successfully saved right here.
         if (!$resource->hasApiError()) {
-            $this->afterSave($options);
+            $this->afterSave($options, $query);
         }
         
         return $resource;
@@ -340,6 +376,10 @@ trait InteractsWithAPI
      */
     protected function performUpdate(Builder $query)
     {
+        if($this->beforeUpdate($query) === false){
+            return;
+        }
+
         $resource = (new $this->updateResource)->fill($this, 'update');
         if($resource->getAttributes() != []){    
             $validator = $resource->validate();
@@ -350,9 +390,9 @@ trait InteractsWithAPI
             
             $resource = $query->{$this->getUpdateMethod()}($resource->getAttributes());
 
-            dd($resource);
-
             $this->syncChanges();
+
+            $this->afterUpdate($query);
 
             return $resource;
         } else {
@@ -368,6 +408,10 @@ trait InteractsWithAPI
      */
     protected function performInsert(Builder $query)
     {
+        if($this->beforeInsert($query) === false){
+            return;
+        }
+
         $resource = (new $this->insertResource)->fill($this, 'insert');
         $validator = $resource->validate();
 
@@ -381,6 +425,8 @@ trait InteractsWithAPI
 
         $resource->wasRecentlyCreated = true;
 
+        $this->afterInsert($query);
+
         return $resource;
     }
 
@@ -389,12 +435,32 @@ trait InteractsWithAPI
         return $this->newQuery()->$method(...$attributes);
     }
 
-    public function beforeSave()
+    public function beforeSave($options, $query)
+    {
+        return $query;
+    }
+
+    public function afterSave($options, $query)
     {
         
     }
 
-    public function afterSave()
+    public function beforeInsert($query)
+    {
+        return $query;
+    }
+
+    public function afterInsert($query)
+    {
+         
+    }
+
+    public function beforeUpdate($query)
+    {
+        return $query;
+    }
+
+    public function afterUpdate($query)
     {
         
     }
@@ -460,12 +526,12 @@ trait InteractsWithAPI
         return $response;
     }
 
-    public function beforeDeleting()
+    public function beforeDeleting($query)
     {
-        
+        return $query;   
     }
 
-    public function afterDeleting()
+    public function afterDeleting($query)
     {
         
     }
@@ -606,6 +672,31 @@ trait InteractsWithAPI
     public function isNot($model)
     {
         return ! $this->is($model);
+    }
+
+    public function beforeQuery($query)
+    {
+        
+    }
+
+    public function beforePostQuery($query)
+    {
+        
+    }
+
+    public function beforePatchQuery($query)
+    {
+        
+    }
+
+    public function beforePutQuery($query)
+    {
+        
+    }
+
+    public function beforeDeleteQuery($query)
+    {
+        
     }
 
 }

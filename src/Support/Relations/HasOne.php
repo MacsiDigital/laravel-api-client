@@ -15,7 +15,7 @@ class HasOne extends Relation
 
     public $type = 'HasOne';
 
-    public function __construct($related, $owner, $name, $field)
+    public function __construct($related, $owner, $name, $field, $updateFields = [])
     {
         $this->relatedClass = $related;
         $this->related = new $related($owner->client);
@@ -99,6 +99,11 @@ class HasOne extends Relation
     public function create($data)
     {
         return $this->save($this->make($data));
+    }
+
+    public function make($data)
+    {
+        return $this->relation = $this->related->newInstance()->fill($data);
     }
 
     // Be good to add these:- findOrNew, updateOrCreate

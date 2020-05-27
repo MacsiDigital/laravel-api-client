@@ -14,14 +14,46 @@ class HasMany extends Relation
 
     public $type = 'HasMany';
 
-    public function __construct($related, $owner, $name, $field)
+    public function __construct($related, $owner, $name, $field, $updateFields = [])
     {
         $this->relatedClass = $related;
         $this->related = new $this->relatedClass($owner->client);
         $this->owner = $owner;
         $this->name = $name;
         $this->field = $field;
+        $this->setUpdateFields($updateFields);
         $this->boot();
+    }
+
+    protected function setUpdateFields($fields) 
+    {
+        $this->updateFields = $fields;
+        if($this->owner->hasKey()){
+            $this->updateFields[$this->field] = $this->owner->getKey();
+        }
+    }
+
+    public function hasUpdateFields() 
+    {
+        return $this->updateFields != [];
+    }
+
+    public function getUpdateKeys() 
+    {
+        return array_keys($this->updateFields);
+    }
+
+    public function updateFields($item){
+        if(is_array($item)){
+            foreach($this->updateFields as $key => $value){
+                $item[$key] = $value;
+            }
+        } elseif(is_object($item)){
+            foreach($this->updateFields as $key => $value){
+                $item->$key = $value;
+            }
+        }
+        return $item;
     }
 
     public function boot() 
@@ -48,10 +80,7 @@ class HasMany extends Relation
     	$collection = new Collection;
         if($array != []){
             foreach($array as $data){
-                if($this->owner->hasKey()){
-                    $data[$this->field] = $this->owner->getKey();
-                }
-                $collection->push($this->related->newFromBuilder($data));
+                $collection->push($this->related->newFromBuilder($this->updateFields($data)));
             }
         }
     	$this->relation = $collection;
@@ -65,19 +94,13 @@ class HasMany extends Relation
 
     public function make($data)
     {
-        $object = $this->newRelation($data);
-        if($object instanceof InteractsWithAPI){
-            if($this->owner->hasKey()){
-                $object->{$this->field} = $this->owner->getKey();
-            }
-        }
-        $this->attach($object);
+        $this->attach($this->newRelation($this->updateFields($data)));
         return $object;
     }
 
     public function attach($object)
     {
-        $this->relation->push($object);
+        $this->relation->push($this->updateFields($object));
         return $this;
     }
 
@@ -89,11 +112,7 @@ class HasMany extends Relation
     public function save(object $object)
     {
         if($object instanceof $this->relatedClass){
-            if($this->field != null && $this->owner->hasKey()){
-                $object->{$this->field} = $this->owner->getKey();
-            }
-            $object->save();
-            $this->attach($object);
+            $this->attach($this->updateFields($object)->save());
             return $object;
         } else {
             throw new IncorrectRelationshipModel($this->related, $object);
@@ -134,14 +153,17 @@ class HasMany extends Relation
         return $this->getResults()->first()->fresh();
     }
 
+    public function last() 
+    {
+        return $this->getResults()->last()->fresh();
+    }
 
     public function getRelationFromApi() 
     {
-        // Not throwing error on bad call - maybe need to create a rawData method on Builder
-        $this->relation = $this->related->newInstance([$this->field => $this->owner->getKey()])->all();
-        if($this->field != null && $this->owner->hasKey()){
+        $this->relation = $this->newRelation($this->updateFields([]))->setPassOnAttributes($this->getUpdateKeys())->all();
+        if($this->hasUpdateFields()){
             foreach($this->relation as $object){
-                $object->{$this->field} = $this->owner->getKey();
+                $this->updateFields($object);
             }
         }
         return $this;
@@ -150,9 +172,9 @@ class HasMany extends Relation
     public function nextPage() 
     {
         $this->relation = $this->relation->nextPage();
-        if($this->field != null && $this->owner->hasKey()){
+        if($this->hasUpdateFields()){
             foreach($this->relation as $object){
-                $object->{$this->field} = $this->owner->getKey();
+                $this->updateFields($object);
             }
         }
     }
@@ -160,9 +182,9 @@ class HasMany extends Relation
     public function prevPage() 
     {
         $this->relation = $this->relation->prevPage();
-        if($this->field != null && $this->owner->hasKey()){
+        if($this->hasUpdateFields()){
             foreach($this->relation as $object){
-                $object->{$this->field} = $this->owner->getKey();
+                $this->updateFields($object);
             }
         }
     }
@@ -176,10 +198,11 @@ class HasMany extends Relation
      */
     public function __call($method, $parameters)
     {
-        if(method_exists($this->relation, $method)){
+        if($this->relation->count() > 0 && method_exists($this->relation, $method)){
             return $this->forwardCallTo($this->relation, $method, $parameters);
         } else {
-            return $this->forwardCallTo($this->newInstance(), $method, $parameters);
+            $relation = $this->newRelation($this->updateFields([]))->setPassOnAttributes($this->getUpdateKeys());
+            return $this->forwardCallTo($relation, $method, $parameters);
         }   
     }
 

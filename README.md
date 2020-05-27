@@ -14,9 +14,9 @@ composer require macsidigital/laravel-api-client
 
 1.0 - Laravel 5.5 - 5.8 - Bug fixes only, mainly there for backward compatibility, if there are any issues then create a pull request.
 
-2.0 - Laravel 6.0 - Maintanined, again feel free to create pull requests.  This is open source which is a 2 way street.
+2.0 - Laravel 6.0 - Maintained, again feel free to create pull requests.  This is open source which is a 2 way street.
 
-3.0 - Laravel 7.0 - Maintanined, again feel free to create pull requests.  This is open source which is a 2 way street.  Reason why it only uses Laravel 7 is because we hook into the new HTTP/Client and some other models in Laravel, thankfully created by Taylor Otwell.
+3.0 - Laravel 7.0 - Maintained, again feel free to create pull requests.  This is open source which is a 2 way street.
 
 ## Usage
 
@@ -189,12 +189,14 @@ Xero uses a patch request for creating models and post request for updating mode
 
 ## Retreiving models
 
-You can retrieve a single model by either using the find method and passing an ID, or an array of ID's, or by running a query and returning first();
+You can retrieve a single model by either using the find method and passing an ID, or an array of ID's, or by running a query and returning first() or last();
 
 ```php
 	$user = API::user()->find('ID');
 
-	$user = API::user()->where('Name', 'Bob')->first();
+	$user = API::user()->where('Name', 'Bob')->first(); // First occurence
+
+    $user = API::user()->where('Name', 'Bob')->last(); // Last occurence
 ```
 
 You can also use get and all to retreive many models, this will return a Result Set, which is an enhanced Laravel Collection.
@@ -317,17 +319,17 @@ We utilise Laravel's hasAttributes trait in the models so you should be able to 
 
 ### Resources
 
-These are generally gesources that are returned as relationships of other models but do not interact with the API directly.  To create one of these extend the MacsiDigital/API/Support/Resource.
+These are generally gesources that are returned as relationships of other models but do not interact with the API directly.  To create one extend the MacsiDigital/API/Support/Resource.
 
-THis should only be used on models that are returned as a sub array of a called model.
+This should only be used on models that are returned as a sub array of a called model.
 
-### ApiResources
+### API Resources
 
-These are models that will interact directly with an API, or indirectly through a parent model. To create one of these extend the MacsiDigital/API/Support/APIResource.
+These are models that will interact directly with an API, or indirectly through a parent model. To create one extend the MacsiDigital/API/Support/APIResource.
 
 If you want to roll your own then you need to ensure you add the MacsiDigital\API\Traits\InteractsWithAPI trait.  Also follow how our Support API resource works.
 
-In these models we also variosu info we store, like primary key and api endpoints, these are the available attributes
+In these models we also house many variables, like primary key and api endpoints, these are the available attributes
 
 ```php
 	// These will map to RESTful requests
@@ -353,7 +355,7 @@ In these models we also variosu info we store, like primary key and api endpoint
     // Also, some API's return 'users' for multiple and user for single, set teh multiple field below to wheat is required if different
     protected $apiMultipleDataField = 'data'; 
 ```
-The apiData and apiMultiple fields dictate what fields that are being returned contains the resources, this should be 'data' in a good api but it really does vary.  Zoom uses 'users' for multiple records and '' for single.
+The apiData and apiMultiple fields dictate what field in the response will house the main body data, this should be 'data' in a good api but it really does vary.  Zoom uses 'users' for multiple records and '' for single.
 
 If apiDataField is set to '' it will return the body direct.
 
@@ -363,7 +365,7 @@ If apiDataField is set to '' it will return the body direct.
 
 Xero also uses a different method.
 
-In the case of Xero it can be overwritten in the getApiDatField function so that we dont have to set on all models.
+In the case of Xero it can be overwritten in the getApiMultipleDataField function so that we dont have to set on all models.
 
 ```php
 	public function getApiMultipleDataField()
@@ -390,9 +392,18 @@ A quick note on endpoints, we can set an endpoint as 'users' but we can also inc
     protected $endPoint = 'users/{user:id}/settings';
 ```
 
+We can also set customEndpoints on a model for specific endPoints, if the endPoints dont follow convention.
+
+```php
+    protected $customEndPoints = [
+        'get' => 'users/{user:id}/meetings',
+        'post' => 'users/{user:id}/meetings'
+    ];
+```
+
 ### Relationships
 
-We have tried to get the models as close to a Laravel model as we can, even down to how relationships work.  
+We have tried to get the models as close to a Laravel model as we can, even down to how relationships work.
 
 By default we will try to create relationship objects for any returned input if they are setup. However you can override this behaviour by setting LoadRaw to true in the model
 
@@ -424,7 +435,7 @@ This could also be a HasMany relationship and the reverse on the address would b
     }
 ```
 
-A name and a field can be passed as a 2nd and 3rd argument.
+A name and a field can be passed as a 2nd and 3rd argument.  A 4th argument can also passed which will be any fields and values in an array that should be passed onto all relationship models.  This is handy when you need to track a parent's id on teh child model.
 
 We try to automatically work out the name and field attributes if not passed for you based on the function name, so we will look for a field 'user_id' in the array 'users' in the above method. However not all API's use the same id naming so you can set the IDSuffix by adding this to your model.
 
@@ -470,7 +481,7 @@ We utilise save, saveMany (has many only), create and createMany (has many only)
     $user = API::user()->find('id');
     
     $user->address()->create([
-        'address1' => '21 Test Street',
+        'address1' => '17 Test Street',
         ...
     ]);
 ```
@@ -494,7 +505,7 @@ When the relation models do not interact with the api then we expose new make() 
     $user->address()->attach($address);
 ```
 
-This works well when relationships are returned direct as part of an API call, which is common in API's.  However sometimes API's dont send these items direct adn therefore need different end point calls.
+This works well when relationships are returned direct as part of an API call, which is common in API's.  However sometimes API's dont send these items direct and therefore need different end point calls.
 
 In these cases we use custom relationship models
 
@@ -504,7 +515,7 @@ First you need to extend either the HasOne or HasMany relationship models.
 
 Within the extended model you need to create the logic for retreiving, creating, updating and deleting as is required by the API.  Unfortunetly as these are all case specific you will need to create CustomRelations models for any implementation required.
 
-To call it we call the hasCustom method and pass the model class as the 2nd parameter.  Parameters 3 and 4 can still be the name and field.
+To call it we call the hasCustom method and pass the model class as the 2nd parameter.  Parameters 3 and 4 can still be the name and field and 5 any fields and values to add to any new models.
 
 ```php
 public function addresses()
@@ -605,7 +616,7 @@ As arrays cant use symbols as keys we do some translating, so if '=' is called w
 
 The default is called for any custom filters, so lets say you call where('name', 'StartsWith', 'Bob') this will call addWhereStartsWith and processWhereStartsWith methods
 
-Now each API will handle filtering differently so the logic in these methods are to suit the API, here is an example for xero, who add all filters to a where query string.  They allow the main ones and have 3 custom types, 'Contains' which is the same as a 'like' call, 'StartWith' and 'EndsWith'.
+Now each API will handle filtering differently so the logic in these methods are to suit the API, here is an example for Xero, who add all filters to a where query string.  They allow the main ones and have 3 custom types, 'Contains' which is the same as a 'like' call, 'StartWith' and 'EndsWith'.
 
 ```php
 	public function processEquals($detail) 
@@ -720,7 +731,7 @@ Of course for these sorts of custom actions we have to update the allowed operan
 
 ## Creating and Updating
 
-Generally in API's the attributes required for saving and updating are different, and they are in turn differnet to the attributes when a model is retreived.  We therefore utilise 'Persistance' models which will house validation logic and the attributes required to make a successful save.  So in our models we need to Extend the InteractsWithAPI trait and add the following 2 protected attributes.
+Generally in API's the attributes required for saving and updating are different, and they are in turn different to the attributes when a model is retrieved.  We therefore utilise 'Persistance' models which will house validation logic and the attributes required to make a successful save.  So in our models we need to Extend the InteractsWithAPI trait and add the following 2 protected attributes.
 
 ```php
 	protected $insertResource = 'MacsiDigital\API\Dev\Resources\StoreAddress';
@@ -846,7 +857,7 @@ To save its as simple as calling the save() function.
 	$user->save();
 ```
 
-THe model will see if it already exists and call the correct update method.  If updating we will only pass dirty attributes to the persistance model.
+THe model will see if it already exists and call the correct insert or update method.  If updating we will only pass dirty attributes to the persistance model.
 
 You can also utilise other laravel methods like make, create and update directly in the model.
 
