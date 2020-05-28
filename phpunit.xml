@@ -26,7 +26,6 @@
         <log type="coverage-clover" target="build/logs/clover.xml"/>
     </logging>
     <php>
-        <env name="STRIPE_SECRET" value="sk_test_nAaX6ZgHyzISbgfeh1Qg3tA0"/>
-        <env name="CASHIER_PAYMENT_NOTIFICATION" value="Laravel\Cashier\Notifications\ConfirmPayment"/>
+
     </php>
 </phpunit>
