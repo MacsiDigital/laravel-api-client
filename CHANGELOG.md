@@ -2,6 +2,10 @@
 
 All notable changes to `laravel-api-client` will be documented in this file
 
+## 3.0.4 - 2020-05-29
+
+- Bug fix, getKey function went into infinite loop
+
 ## 3.0.3 - 2020-05-29
 
 - Bug fix, error on deletion.
@@ -15,6 +19,10 @@ All notable changes to `laravel-api-client` will be documented in this file
 - The Laravel 7.0 Version
 - Use the Laravel Http client.
 
+## 2.0.5 - 2020-05-29
+
+- Bug fix, getKey function went into infinite loop
+
 ## 2.0.4 - 2020-05-29
 
 - Bug fix, error on deletion.
@@ -27,6 +35,10 @@ All notable changes to `laravel-api-client` will be documented in this file
 
 - The Laravel 6.0 Version
 - Mainly updates to use newer Laravel Model Attribute casting.
+
+## 1.0.17 - 2020-05-29
+
+- Bug fix, getKey function went into infinite loop
 
 ## 1.0.16 - 2020-05-29
 
