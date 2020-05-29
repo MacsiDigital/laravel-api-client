@@ -758,30 +758,12 @@ class Builder
 
     protected function processIndividualDeleteResponse($response)
     {
-        if($this->getApiDataField() != null){
-            $data = $response->json()[$this->getApiDataField()];
-        } else {
-            $data = $response->json();
-        }
-        if(isset($data[0])){
-            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
-        } else {
-            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
-        }
+        return true;
     }
 
     protected function processMultiDeleteResponse($response)
     {
-        // if($this->getApiDataField() != null){
-        //     $data = $response->json()[$this->getApiDataField()];
-        // } else {
-        //     $data = $response->json();
-        // }
-        // if(isset($data[0])){
-        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
-        // } else {
-        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
-        // }
+        return true;
     }
 
     public function prepareHttpErrorMessage($response)
