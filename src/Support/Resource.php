@@ -33,7 +33,7 @@ class Resource
         foreach ($attributes as $key => $value) {
             $this->setAttribute($key, $value);
         }
-        
+
         return $this;
     }
 
@@ -70,6 +70,40 @@ class Resource
         $model->setRawAttributes((array) $attributes, true);
 
         return $model;
+    }
+
+    /**
+     * Update the current model instance.
+     *
+     * @param  array  $attributes
+     * @param  string|null  $connection
+     * @return static
+     */
+    public function updateFromBuilder($attributes = [])
+    {
+        $this->mergeRawAttributes((array) $attributes, true);
+
+        return $this;
+    }
+
+    /**
+     * Merge the array of model attributes. No checking is done.
+     *
+     * @param  array  $attributes
+     * @param  bool  $sync
+     * @return $this
+     */
+    public function mergeRawAttributes(array $attributes, $sync = false)
+    {
+        $this->attributes = array_merge($this->attributes, $attributes);
+
+        if ($sync) {
+            $this->syncOriginal();
+        }
+
+        $this->classCastCache = [];
+
+        return $this;
     }
 
     /**

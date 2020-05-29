@@ -169,7 +169,7 @@ class Builder
         return $this->resource->getApiDataField();
     }
 
-    public function find($id, $column="") 
+    public function find($id, $column="")
     {
         if(is_array($id)){
             return $this->whereIn($id, $column)->get(null, $raw);
@@ -180,19 +180,19 @@ class Builder
         ]), "individual", "allow");
     }
 
-    public function findMany(array $id, $column="") 
+    public function findMany(array $id, $column="")
     {
         return $this->whereIn($id, $column)->get();
     }
 
-    public function findOrFail($id) 
+    public function findOrFail($id)
     {
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get').'/'.$id
         ]), "individual", "error");
     }
 
-    public function firstOrFail() 
+    public function firstOrFail()
     {
         if(!is_null($model = $this->first())){
             return $model;
@@ -200,7 +200,7 @@ class Builder
         throw (new ModelNotFoundException)->setModel(get_class($this->resource));
     }
 
-    protected function processHeaders() 
+    protected function processHeaders()
     {
         if($this->asForm){
             $this->request->asForm();
@@ -210,7 +210,7 @@ class Builder
         }
     }
 
-    protected function processFiles() 
+    protected function processFiles()
     {
         if($this->files != []){
             foreach($this->files as $key => $file){
@@ -238,7 +238,7 @@ class Builder
         }
     }
 
-    public function handleRaw($response) 
+    public function handleRaw($response)
     {
         if(!$this->throwExceptionsIfRaw){
             return $response;
@@ -249,7 +249,7 @@ class Builder
         }
     }
 
-    public function handle404($response, $ifEmpty) 
+    public function handle404($response, $ifEmpty)
     {
         if($ifEmpty == 'allow'){
             return null;
@@ -260,7 +260,7 @@ class Builder
         }
     }
 
-    public function all() 
+    public function all()
     {
         $this->setPerPageToMax();
         if($this->resource->beforeQuery($this) === false){
@@ -270,7 +270,7 @@ class Builder
             $this->retreiveEndPoint('get'),
             $this->addPagination($this->combineQueries()),
         ]), 'all');
-        
+
     }
 
     public function get()
@@ -304,7 +304,7 @@ class Builder
             $this->retreiveEndPoint('post'),
             $attributes,
             $this->combineQueries()
-        ]), $type);
+        ]), $type.'Post');
     }
 
     public function patch($attributes, $type="individual")
@@ -316,7 +316,7 @@ class Builder
             $this->retreiveEndPoint('patch'),
             $attributes,
             $this->combineQueries()
-        ]), $type);
+        ]), $type.'Patch');
     }
 
     public function put($attributes, $type="individual")
@@ -328,10 +328,10 @@ class Builder
             $this->retreiveEndPoint('put'),
             $attributes,
             $this->combineQueries()
-        ]), $type);
+        ]), $type.'Put');
     }
 
-    public function delete($type="individual") 
+    public function delete($type="individual")
     {
         if($this->resource->beforeDeleteQuery($this) === false){
             return;
@@ -339,7 +339,7 @@ class Builder
         return $this->handleResponse($this->sendRequest('delete', [
             $this->retreiveEndPoint('delete'),
             $this->combineQueries()
-        ]), $type);
+        ]), $type.'Delete');
     }
 
     public function first()
@@ -364,12 +364,12 @@ class Builder
         return $this;
     }
 
-    public function whereRaw($column, $value) 
+    public function whereRaw($column, $value)
     {
         $this->addQuery($column, $value);
         return $this;
     }
-    
+
     public function where($column, $operand = null, $value = null)
     {
         if(is_array($column)){
@@ -433,7 +433,7 @@ class Builder
         $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
     }
 
-    public function whereIn(array $values, $column="") 
+    public function whereIn(array $values, $column="")
     {
         $string = implode(',', $values);
         if($column == ''){
@@ -443,24 +443,24 @@ class Builder
         return $this;
     }
 
-    public function orderBy($value, $column='order') 
+    public function orderBy($value, $column='order')
     {
         $this->orders[$column] = $value;
         return $this;
     }
 
-    public function count() 
+    public function count()
     {
         return $this->get()->count();
     }
 
-    public function setPaginate($status=true) 
+    public function setPaginate($status=true)
     {
         $this->paginate = $status;
         return $this;
     }
 
-    public function shouldPaginate() 
+    public function shouldPaginate()
     {
         return $this->paginate;
     }
@@ -519,13 +519,13 @@ class Builder
         return $this;
     }
 
-    public function raw($status=true) 
+    public function raw($status=true)
     {
         $this->raw = $status;
         return $this;
     }
 
-    public function withExceptions($status=true) 
+    public function withExceptions($status=true)
     {
         $this->throwExceptionsIfRaw = $status;
         return $this;
@@ -536,7 +536,7 @@ class Builder
         return $this->raw;
     }
 
-    protected function combineQueries() 
+    protected function combineQueries()
     {
         return array_merge($this->processQueries(), $this->processOrders());
     }
@@ -556,12 +556,12 @@ class Builder
         return $this;
     }
 
-    public function processWhereEquals($detail) 
+    public function processWhereEquals($detail)
     {
         $this->processedWheres[$detail['column']] = $detail['value'];
     }
 
-    public function processWhereNotEquals($detail) 
+    public function processWhereNotEquals($detail)
     {
         $this->processedWheres[$detail['column']] = '-'.$detail['value'];
     }
@@ -601,7 +601,7 @@ class Builder
         return $this->orders;
     }
 
-    public function addPagination($array) 
+    public function addPagination($array)
     {
         if($this->perPage != ''){
             $array[$this->perPageField] = $this->perPage;
@@ -647,7 +647,7 @@ class Builder
         $this->orders = [];
         return $this;
     }
-    
+
     protected function processGetResponse($response)
     {
         return new ResultSet($this, $response, $this->resource);
@@ -670,6 +670,118 @@ class Builder
         } else {
             return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
         }
+    }
+
+    protected function processIndividualPostResponse($response)
+    {
+        if($this->getApiDataField() != null){
+            $data = $response->json()[$this->getApiDataField()];
+        } else {
+            $data = $response->json();
+        }
+        if(isset($data[0])){
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
+        } else {
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
+        }
+    }
+
+    protected function processMultiPostResponse($response)
+    {
+        // if($this->getApiDataField() != null){
+        //     $data = $response->json()[$this->getApiDataField()];
+        // } else {
+        //     $data = $response->json();
+        // }
+        // if(isset($data[0])){
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
+        // } else {
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
+        // }
+    }
+
+    protected function processIndividualPatchResponse($response)
+    {
+        if($this->getApiDataField() != null){
+            $data = $response->json()[$this->getApiDataField()];
+        } else {
+            $data = $response->json();
+        }
+        if(isset($data[0])){
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
+        } else {
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
+        }
+    }
+
+    protected function processMultiPatchResponse($response)
+    {
+        // if($this->getApiDataField() != null){
+        //     $data = $response->json()[$this->getApiDataField()];
+        // } else {
+        //     $data = $response->json();
+        // }
+        // if(isset($data[0])){
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
+        // } else {
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
+        // }
+    }
+
+    protected function processIndividualPutResponse($response)
+    {
+        if($this->getApiDataField() != null){
+            $data = $response->json()[$this->getApiDataField()];
+        } else {
+            $data = $response->json();
+        }
+        if(isset($data[0])){
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
+        } else {
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
+        }
+    }
+
+    protected function processMultiPutResponse($response)
+    {
+        // if($this->getApiDataField() != null){
+        //     $data = $response->json()[$this->getApiDataField()];
+        // } else {
+        //     $data = $response->json();
+        // }
+        // if(isset($data[0])){
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
+        // } else {
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
+        // }
+    }
+
+    protected function processIndividualDeleteResponse($response)
+    {
+        if($this->getApiDataField() != null){
+            $data = $response->json()[$this->getApiDataField()];
+        } else {
+            $data = $response->json();
+        }
+        if(isset($data[0])){
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
+        } else {
+            return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
+        }
+    }
+
+    protected function processMultiDeleteResponse($response)
+    {
+        // if($this->getApiDataField() != null){
+        //     $data = $response->json()[$this->getApiDataField()];
+        // } else {
+        //     $data = $response->json();
+        // }
+        // if(isset($data[0])){
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
+        // } else {
+        //     return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
+        // }
     }
 
     public function prepareHttpErrorMessage($response)
