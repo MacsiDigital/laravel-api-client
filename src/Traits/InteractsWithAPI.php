@@ -142,7 +142,7 @@ trait InteractsWithAPI
     public function getKeyForEndPoint()
     {
         if($this->hasKey()){
-            return '/'.$this->getEndPoint();
+            return '/'.$this->getKey();
         }
         return;
     }
