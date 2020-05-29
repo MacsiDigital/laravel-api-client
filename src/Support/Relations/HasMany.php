@@ -25,7 +25,7 @@ class HasMany extends Relation
         $this->boot();
     }
 
-    protected function setUpdateFields($fields) 
+    protected function setUpdateFields($fields)
     {
         $this->updateFields = $fields;
         if($this->owner->hasKey()){
@@ -33,12 +33,12 @@ class HasMany extends Relation
         }
     }
 
-    public function hasUpdateFields() 
+    public function hasUpdateFields()
     {
         return $this->updateFields != [];
     }
 
-    public function getUpdateKeys() 
+    public function getUpdateKeys()
     {
         return array_keys($this->updateFields);
     }
@@ -56,7 +56,7 @@ class HasMany extends Relation
         return $item;
     }
 
-    public function boot() 
+    public function boot()
     {
         if(array_key_exists($this->name, $this->owner->getAttributes())){
             $this->hydrate($this->owner->getAttributes()[$this->name]);
@@ -75,7 +75,7 @@ class HasMany extends Relation
         }
     }
 
-    protected function hydrate($array) 
+    protected function hydrate($array)
     {
     	$collection = new Collection;
         if($array != []){
@@ -86,7 +86,7 @@ class HasMany extends Relation
     	$this->relation = $collection;
     }
 
-    public function empty() 
+    public function empty()
     {
         $this->relation = new Collection;
         return $this;
@@ -94,7 +94,7 @@ class HasMany extends Relation
 
     public function make($data)
     {
-        $this->attach($this->newRelation($this->updateFields($data)));
+        $this->attach(($object = $this->newRelation($this->updateFields($data))));
         return $object;
     }
 
@@ -106,7 +106,7 @@ class HasMany extends Relation
 
     public function detach($object)
     {
-        
+
     }
 
     public function save(object $object)
@@ -140,25 +140,25 @@ class HasMany extends Relation
         return $this;
     }
 
-    public function getResults() 
+    public function getResults()
     {
         if($this->relation->count() == 0){
             $this->getRelationFromApi();
-        }   
+        }
         return $this->relation;
     }
 
-    public function first() 
+    public function first()
     {
         return $this->getResults()->first()->fresh();
     }
 
-    public function last() 
+    public function last()
     {
         return $this->getResults()->last()->fresh();
     }
 
-    public function getRelationFromApi() 
+    public function getRelationFromApi()
     {
         $this->relation = $this->newRelation($this->updateFields([]))->setPassOnAttributes($this->getUpdateKeys())->all();
         if($this->hasUpdateFields()){
@@ -169,7 +169,7 @@ class HasMany extends Relation
         return $this;
     }
 
-    public function nextPage() 
+    public function nextPage()
     {
         $this->relation = $this->relation->nextPage();
         if($this->hasUpdateFields()){
@@ -179,7 +179,7 @@ class HasMany extends Relation
         }
     }
 
-    public function prevPage() 
+    public function prevPage()
     {
         $this->relation = $this->relation->prevPage();
         if($this->hasUpdateFields()){
@@ -203,7 +203,7 @@ class HasMany extends Relation
         } else {
             $relation = $this->newRelation($this->updateFields([]))->setPassOnAttributes($this->getUpdateKeys());
             return $this->forwardCallTo($relation, $method, $parameters);
-        }   
+        }
     }
 
     // Be good to add these:- findOrNew, firstOrNew, firstOrCreate and updateOrCreate
