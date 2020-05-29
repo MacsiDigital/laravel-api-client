@@ -28,7 +28,7 @@ trait InteractsWithAPI
      * @var bool
      */
     public $wasRecentlyCreated = false;
-    
+
     // Allow not a RESTful verb we have 'find' for requests where the id is passed in the URL.
     protected $allowedMethods = ['find', 'get', 'post', 'patch', 'put', 'delete'];
 
@@ -53,7 +53,7 @@ trait InteractsWithAPI
 
     public $passOnKeys = [];
 
-    public function setPassOnAttributes(array $keys) 
+    public function setPassOnAttributes(array $keys)
     {
         $this->passOnKeys = $keys;
         return $this;
@@ -87,7 +87,7 @@ trait InteractsWithAPI
         return new $class($this);
     }
 
-    public function newQuery() 
+    public function newQuery()
     {
         return $this->query($this);
     }
@@ -139,7 +139,7 @@ trait InteractsWithAPI
         return $this->getAttribute($this->getKeyName());
     }
 
-    public function getKeyForEndPoint() 
+    public function getKeyForEndPoint()
     {
         if($this->hasKey()){
             return '/'.$this->getEndPoint();
@@ -152,7 +152,7 @@ trait InteractsWithAPI
         $this->customEndPoints[$type] = $endPoint;
     }
 
-    public function getEndPoint($type='get') 
+    public function getEndPoint($type='get')
     {
         if($this->canPerform($type)){
             return $this->resolveBindings($this->{'get'.Str::studly($type).'EndPoint'}());
@@ -163,17 +163,17 @@ trait InteractsWithAPI
         }
     }
 
-    public function canPerform($type) 
+    public function canPerform($type)
     {
         return in_array($type, $this->getAllowedMethods());
     }
 
-    public function cantPerform($type) 
+    public function cantPerform($type)
     {
         return ! $this->canPerform($type);
     }
 
-    public function getAllowedMethods() 
+    public function getAllowedMethods()
     {
         return $this->allowedMethods;
     }
@@ -188,7 +188,7 @@ trait InteractsWithAPI
         return $this->customEndPoints[$type];
     }
 
-    public function getGetEndPoint() 
+    public function getGetEndPoint()
     {
         if($this->hasCustomEndPoint('get')){
             return $this->getCustomEndPoint('get').$this->getKeyForEndPoint();
@@ -196,7 +196,7 @@ trait InteractsWithAPI
         return $this->endPoint;
     }
 
-    public function getFindEndPoint() 
+    public function getFindEndPoint()
     {
         if($this->hasCustomEndPoint('find')){
             return $this->getCustomEndPoint('find').$this->getKeyForEndPoint();
@@ -204,7 +204,7 @@ trait InteractsWithAPI
         return $this->endPoint;
     }
 
-    public function getPostEndPoint() 
+    public function getPostEndPoint()
     {
         if($this->hasCustomEndPoint('post')){
             return $this->getCustomEndPoint('post').$this->getKeyForEndPoint();
@@ -212,7 +212,7 @@ trait InteractsWithAPI
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
-    public function getPatchEndPoint() 
+    public function getPatchEndPoint()
     {
         if($this->hasCustomEndPoint('patch')){
             return $this->getCustomEndPoint('patch').$this->getKeyForEndPoint();
@@ -220,7 +220,7 @@ trait InteractsWithAPI
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
-    public function getPutEndPoint() 
+    public function getPutEndPoint()
     {
         if($this->hasCustomEndPoint('put')){
             return $this->getCustomEndPoint('put').$this->getKeyForEndPoint();
@@ -228,16 +228,16 @@ trait InteractsWithAPI
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
-    public function getDeleteEndPoint() 
+    public function getDeleteEndPoint()
     {
-        
+
         if($this->hasCustomEndPoint('delete')){
             return $this->getCustomEndPoint('delete').$this->getKeyForEndPoint();
         }
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
-    public function resolveBindings($url) 
+    public function resolveBindings($url)
     {
         if(Str::contains($url, '{')){
             $pattern = '/{\K[^}]*(?=})/m';
@@ -307,7 +307,7 @@ trait InteractsWithAPI
         if ($this->hasKey()) {
             return false;
         }
-        
+
         return $this->fill($attributes)->save($options);
     }
 
@@ -333,7 +333,7 @@ trait InteractsWithAPI
         // clause to only update this model. Otherwise, we'll just insert them.
         if ($this->exists()) {
             $resource = $this->performUpdate($query);
-            
+
         }
         // If the model is brand new, we'll insert it into our database and set the
         // ID attribute on the model to the value of the newly inserted row's ID
@@ -348,11 +348,11 @@ trait InteractsWithAPI
         if (!$resource->hasApiError()) {
             $this->afterSave($options, $query);
         }
-        
+
         return $resource;
     }
 
-    public function hasApiError() 
+    public function hasApiError()
     {
         return isset($this->status_code);
     }
@@ -381,20 +381,20 @@ trait InteractsWithAPI
         }
 
         $resource = (new $this->updateResource)->fill($this, 'update');
-        if($resource->getAttributes() != []){    
+        if($resource->getAttributes() != []){
             $validator = $resource->validate();
 
             if ($validator->fails()) {
                 throw new ValidationFailedException($validator->errors());
             }
-            
-            $resource = $query->{$this->getUpdateMethod()}($resource->getAttributes());
+
+            $query->{$this->getUpdateMethod()}($resource->getAttributes());
 
             $this->syncChanges();
 
             $this->afterUpdate($query);
 
-            return $resource;
+            return $this;
         } else {
             return $this;
         }
@@ -419,15 +419,15 @@ trait InteractsWithAPI
             throw new ValidationFailedException($validator->errors());
         }
 
-        $resource = $query->{$this->getCreateMethod()}($resource->getAttributes());
+        $query->{$this->getCreateMethod()}($resource->getAttributes());
 
-        $resource->exists = true;
+        $this->exists = true;
 
-        $resource->wasRecentlyCreated = true;
+        $this->wasRecentlyCreated = true;
 
         $this->afterInsert($query);
 
-        return $resource;
+        return $this;
     }
 
     protected function performCustomQuery($method, $attributes)
@@ -442,7 +442,7 @@ trait InteractsWithAPI
 
     public function afterSave($options, $query)
     {
-        
+
     }
 
     public function beforeInsert($query)
@@ -452,7 +452,7 @@ trait InteractsWithAPI
 
     public function afterInsert($query)
     {
-         
+
     }
 
     public function beforeUpdate($query)
@@ -462,7 +462,7 @@ trait InteractsWithAPI
 
     public function afterUpdate($query)
     {
-        
+
     }
 
     /**
@@ -528,12 +528,12 @@ trait InteractsWithAPI
 
     public function beforeDeleting($query)
     {
-        return $query;   
+        return $query;
     }
 
     public function afterDeleting($query)
     {
-        
+
     }
 
     /**
@@ -544,7 +544,7 @@ trait InteractsWithAPI
      * @return mixed
      */
     public function __call($method, $parameters)
-    {      
+    {
         return $this->forwardCallTo($this->newQuery(), $method, $parameters);
     }
 
@@ -598,7 +598,7 @@ trait InteractsWithAPI
         return $this->toArray();
     }
 
-    public function fresh() 
+    public function fresh()
     {
         if (! ($this->exists())) {
             return;
@@ -676,27 +676,27 @@ trait InteractsWithAPI
 
     public function beforeQuery($query)
     {
-        
+
     }
 
     public function beforePostQuery($query)
     {
-        
+
     }
 
     public function beforePatchQuery($query)
     {
-        
+
     }
 
     public function beforePutQuery($query)
     {
-        
+
     }
 
     public function beforeDeleteQuery($query)
     {
-        
+
     }
 
 }
