@@ -2,8 +2,6 @@
 
 namespace MacsiDigital\API\Contracts;
 
-use MacsiDigital\API\Facades\Client as ClientFacade;
-
 interface Entry
 {
 
@@ -11,7 +9,7 @@ interface Entry
 
     public function getRequest() ;
 
-    public function setRequest(Client $request);
+    public function setRequest($request);
 
     public function newRequest();
 
