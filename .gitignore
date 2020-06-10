@@ -5,3 +5,5 @@ vendor
 coverage
 /dev
 /tests
+/.idea
+.idea
