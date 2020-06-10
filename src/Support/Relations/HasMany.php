@@ -109,7 +109,7 @@ class HasMany extends Relation
 
     }
 
-    public function save(object $object)
+    public function save($object)
     {
         if($object instanceof $this->relatedClass){
             $this->attach($this->updateFields($object)->save());

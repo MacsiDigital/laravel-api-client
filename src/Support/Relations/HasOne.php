@@ -25,7 +25,7 @@ class HasOne extends Relation
         $this->boot();
     }
 
-    public function boot() 
+    public function boot()
     {
         if(array_key_exists($this->name, $this->owner->getAttributes())){
             $this->hydrate($this->owner->getAttributes()[$this->name]);
@@ -42,7 +42,7 @@ class HasOne extends Relation
         }
     }
 
-    protected function hydrate($data) 
+    protected function hydrate($data)
     {
     	if($data != []){
             if($this->owner->hasKey()){
@@ -54,13 +54,13 @@ class HasOne extends Relation
     	}
     }
 
-    public function empty() 
+    public function empty()
     {
         $this->relation = null;
         return $this;
     }
 
-    public function save(object $object)
+    public function save($object)
     {
         if($this->relation == null){
             if($object instanceof InteractsWithAPI){
@@ -73,21 +73,21 @@ class HasOne extends Relation
                     throw new IncorrectRelationshipModel($this->related, $object);
                 }
             } else {
-                throw new NotAPersistableModel($this->owner, $this->related);        
+                throw new NotAPersistableModel($this->owner, $this->related);
             }
         }
         throw new RelationAlreadyExistsException($this->owner, $this->related);
     }
 
-    public function getResults() 
+    public function getResults()
     {
         if(empty($this->relation)){
             $this->getRelationFromApi();
-        }   
+        }
         return $this->relation;
     }
 
-    public function getRelationFromApi() 
+    public function getRelationFromApi()
     {
         $this->relation = $this->related->newInstance([$this->field => $this->owner->getKey()])->getOne();
         if($this->field != null && $this->owner->hasKey() && $this->relation != null){
