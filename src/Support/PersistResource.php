@@ -31,7 +31,7 @@ class PersistResource
         return $this;
     }
 
-    protected function fillForInsert(object $object) 
+    protected function fillForInsert(object $object)
     {
         foreach ($object->getAttributes() as $key => $value) {
             if(Arr::exists($this->getPersistAttributes(), $key)){
@@ -56,7 +56,7 @@ class PersistResource
         }
     }
 
-    protected function fillForUpdate(object $object) 
+    protected function fillForUpdate(object $object)
     {
         if($object->updatesOnlyDirty()){
             $data = $object->getDirty();
@@ -86,12 +86,12 @@ class PersistResource
         }
     }
 
-    public function processMutate($key, $value) 
+    public function processMutate($key, $value)
     {
         data_set($this->attributes, $this->getMutateKey($key), $value);
     }
 
-    public function processManyFill($key, $value) 
+    public function processManyFill($key, $value)
     {
         $temp = [];
         foreach($value as $object){
@@ -105,7 +105,7 @@ class PersistResource
         if(is_array($this->getRelatedClass($key))){
             $attributes = $this->getRelatedClass($key);
             $temp = [];
-            $array = $type == 'insert' ? $object->getAttributes() : $object->getDirty();
+            $array = $type == 'insert' || !$object->updatesOnlyDirty() ? $object->getAttributes() : $object->getDirty();
             foreach($array as $subKey => $subValue){
                 if(Arr::exists($attributes, $subKey)){
                     $temp[$subKey] = $subValue;
@@ -120,7 +120,7 @@ class PersistResource
         }
     }
 
-    public function recursiveFill($key, $value) 
+    public function recursiveFill($key, $value)
     {
         $array = [];
         foreach($value as $childKey => $childValue){
@@ -152,7 +152,7 @@ class PersistResource
                     $relation = $this->object->{lcfirst($key)}()->type;
                 } else {
                     $relation = 'HasOne';
-                } 
+                }
                 if($relation == 'HasOne'){
                     $attributes[$key] = 'array';
                     $attributes[$key.'.'.$field] = $rules;
@@ -166,26 +166,26 @@ class PersistResource
         return $attributes;
     }
 
-    public function processEmpties() 
+    public function processEmpties()
     {
         foreach($this->getAttributes() as $key => $value){
             if(is_array($value)){
                 $this->attributes[$key] = $this->processRecursiveEmpty($value);
                 if(empty($this->attributes[$key])) {
                     unset($this->attributes[$key]);
-                } 
+                }
             }
         }
     }
 
-    public function processRecursiveEmpty(array $array) 
+    public function processRecursiveEmpty(array $array)
     {
         foreach($array as $key => $value) {
             if(is_array($value)){
                 $value = $this->processRecursiveEmpty($value);
                 if(empty($value)) {
                     unset($array[$key]);
-                }     
+                }
             }
         }
         return $array;
@@ -216,22 +216,22 @@ class PersistResource
         return $this->relatedResource[$key];
     }
 
-    public function setRelation($name, $relation) 
+    public function setRelation($name, $relation)
     {
         $this->relations[$name] = $relation;
     }
 
-    public function hasRelation($name) 
+    public function hasRelation($name)
     {
         return isset($this->relations[$name]);
     }
 
-    public function getRelation($name) 
+    public function getRelation($name)
     {
         return $this->relations[$name];
     }
 
-    public function getAttributes() 
+    public function getAttributes()
     {
         return $this->attributes;
     }
@@ -241,8 +241,8 @@ class PersistResource
         return Validator::make($this->getAttributes(), $this->getValidationAttributes());
     }
 
-    public function updateRelatedResource() 
+    public function updateRelatedResource()
     {
-        
+
     }
 }

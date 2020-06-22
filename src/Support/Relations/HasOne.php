@@ -89,7 +89,7 @@ class HasOne extends Relation
 
     public function getRelationFromApi()
     {
-        $this->relation = $this->related->newInstance([$this->field => $this->owner->getKey()])->getOne();
+        $this->relation = $this->newRelation([$this->field => $this->owner->getKey()]);
         if($this->field != null && $this->owner->hasKey() && $this->relation != null){
             $this->relation->{$this->field} = $this->owner->getKey();
         }
