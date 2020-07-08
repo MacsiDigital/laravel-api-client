@@ -66,7 +66,7 @@ trait HasAttributes
                 if($this->relationLoaded($key)){
                     $this->updateRelationAttribute($key, $value);
                     return $this;
-                }    
+                }
             }
         }
 
@@ -110,7 +110,7 @@ trait HasAttributes
         return $this;
     }
 
-    protected function setRelationAttribute($key, $value) 
+    protected function setRelationAttribute($key, $value)
     {
         if($this->loadRaw || in_array($key, $this->dontAutoloadRelation)){
             return;
@@ -130,12 +130,12 @@ trait HasAttributes
         }
     }
 
-    protected function updateRelationAttribute($key, $value) 
+    protected function updateRelationAttribute($key, $value)
     {
         if($this->loadRaw || in_array($key, $this->dontAutoloadRelation)){
             return;
         }
-        
+
         if ($this->isRelationship($key)){
             $this->getRelation($key)->update($value);
         } elseif ($this->isRelationship(Str::plural($key))) {
@@ -152,8 +152,8 @@ trait HasAttributes
         if (! $key) {
             return;
         }
-        
-        // need to check for a relationship first - otherwise we will be passing back the 
+
+        // need to check for a relationship first - otherwise we will be passing back the
         // array if relationship is passed as attributes in the API call
         if(method_exists($this, 'setRelation') && $this->isRelationship($key)){
             return $this->getRelationValue($key);
@@ -191,7 +191,7 @@ trait HasAttributes
         // it is a relationship and will load and return results from the query
         // and hydrate the relationship's value on the "relationships" array.
         if (method_exists($this, $key)) {
-            return $this->getRelationshipFromMethod($key);
+            return $this->getRelationshipFromMethod($key)->getResults();
         }
     }
 
@@ -218,10 +218,12 @@ trait HasAttributes
                 '%s::%s must return a relationship instance.', static::class, $method
             ));
         }
+        $this->setRelation($method, $relation);
 
-        return tap($relation->getResults(), function ($results) use ($method) {
-            $this->setRelation($method, $results);
-        });
+        return $this->getRelation($method);
+//        return tap($relation->getResults(), function ($results) use ($method) {
+//
+//        });
     }
 
     /**
@@ -233,5 +235,5 @@ trait HasAttributes
     {
         return $this->dateFormat ?: 'Y-m-d H:i:s';
     }
-    
+
 }

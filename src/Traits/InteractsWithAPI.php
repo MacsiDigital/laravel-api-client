@@ -51,6 +51,12 @@ trait InteractsWithAPI
     // Also, some API's return 'users' for multiple and user for single, set teh multiple field below to wheat is required if different
     protected $apiMultipleDataField = 'data';
 
+    protected $wrapInOnInsert = '';
+    protected $wrapInEmptyArrayOnInsert = false;
+
+    protected $wrapInOnUpdate = '';
+    protected $wrapInEmptyArrayOnUpdate = false;
+
     public $passOnKeys = [];
 
     public function setPassOnAttributes(array $keys)
@@ -381,14 +387,16 @@ trait InteractsWithAPI
         }
 
         $resource = (new $this->updateResource)->fill($this, 'update');
+        
         if($resource->getAttributes() != []){
+
             $validator = $resource->validate();
 
             if ($validator->fails()) {
                 throw new ValidationFailedException($validator->errors());
             }
 
-            $query->{$this->getUpdateMethod()}($resource->getAttributes());
+            $query->{$this->getUpdateMethod()}($resource->getAttributes($this->wrapInOnUpdate, $this->wrapInEmptyArrayOnUpdate));
 
             $this->syncChanges();
 
@@ -413,13 +421,14 @@ trait InteractsWithAPI
         }
 
         $resource = (new $this->insertResource)->fill($this, 'insert');
+
         $validator = $resource->validate();
 
         if ($validator->fails()) {
             throw new ValidationFailedException($validator->errors());
         }
 
-        $query->{$this->getCreateMethod()}($resource->getAttributes());
+        $query->{$this->getCreateMethod()}($resource->getAttributes($this->wrapInOnInsert, $this->wrapInEmptyArrayOnInsert));
 
         $this->exists = true;
 
