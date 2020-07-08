@@ -231,9 +231,18 @@ class PersistResource
         return $this->relations[$name];
     }
 
-    public function getAttributes()
+    public function getAttributes($wrapped='', $emptyArray = false)
     {
-        return $this->attributes;
+        if($emptyArray){
+            $return = [$this->attributes];
+        } else {
+            $return = $this->attributes;
+        }
+
+        if($wrapped == ''){
+            return $return;
+        }
+        return [$wrapped => $return];
     }
 
     public function validate()
