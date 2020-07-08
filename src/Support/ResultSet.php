@@ -47,7 +47,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 	protected $resource;
 
 	public function __construct($builder, $response, $resource, $all=false)
-	{		
+	{
 		$this->all = $all;
 		$this->builder = $builder;
 		$this->resource = $resource;
@@ -73,7 +73,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		$this->raw = $status;
 	}
 
-	protected function processResponse($response) 
+	protected function processResponse($response)
 	{
 		$this->addResponse($response);
 		$this->populate($response->json());
@@ -81,7 +81,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		$this->incrementQueries();
 	}
 
-	protected function incrementQueries() 
+	protected function incrementQueries()
 	{
 		$this->queries++;
 	}
@@ -94,22 +94,22 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		return $this->maxQueries > $this->queries;
 	}
 
-	protected function incrementTotalDownloads($i=1) 
+	protected function incrementTotalDownloads($i=1)
 	{
 		$this->downloaded += $i;
 	}
 
-	public function resetQueryCount() 
+	public function resetQueryCount()
 	{
 		$this->queries = 0;
 	}
 
-	protected function addResponse($response) 
+	protected function addResponse($response)
 	{
 		$this->responses[] = $response;
 	}
 
-	protected function populate($array) 
+	protected function populate($array)
 	{
 		if($this->raw){
 			$this->items = array_merge($this->items, $array[$this->resource->getApiMultipleDataField()]);
@@ -123,7 +123,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	protected function processMeta($array) 
+	protected function processMeta($array)
 	{
 		if(Arr::has($array, $this->resource->client->getResultsPageField())){
 			$this->apiCurrentPage = (int) Arr::get($array, $this->resource->client->getResultsPageField());
@@ -176,7 +176,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		return in_array($page, $this->apiPagesDownloaded);
 	}
 
-	protected function apiHasMorePages() 
+	protected function apiHasMorePages()
 	{
 		if($this->apiLastPage() == null){
 			return true;
@@ -184,42 +184,42 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		return $this->apiLastPage() > $this->apiCurrentPage();
 	}
 
-	protected function apiHasPerPage() 
+	protected function apiHasPerPage()
 	{
 		return $this->apiPerPage != '';
 	}
 
-	protected function apiIsFirstPage() 
+	protected function apiIsFirstPage()
 	{
 		return $this->apiCurrentPage() <= 1;
 	}
 
-	protected function apiLastPage() 
+	protected function apiLastPage()
 	{
 		return $this->apiLastPage;
 	}
 
-	protected function apiFirstPage() 
+	protected function apiFirstPage()
 	{
 		return 1;
 	}
 
-	protected function apiPerPage() 
+	protected function apiPerPage()
 	{
 		return $this->apiPerPage;
 	}
 
-	protected function apiCurrentPage() 
+	protected function apiCurrentPage()
 	{
 		return $this->apiCurrentPage;
 	}
 
-	protected function apiNextPageNumber() 
+	protected function apiNextPageNumber()
 	{
 		return $this->apiCurrentPage + 1;
 	}
 
-	protected function apiPreviousPageNumber() 
+	protected function apiPreviousPageNumber()
 	{
 		return $this->apiCurrentPage - 1;
 	}
@@ -229,7 +229,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		return $this->apiTotalRecords;
 	}
 
-	public function hasMorePages() 
+	public function hasMorePages()
 	{
 		if($this->hasOwnMeta){
 			return $this->lastPage() > $this->currentPage();
@@ -238,7 +238,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function hasPerPage() 
+	public function hasPerPage()
 	{
 		if($this->hasOwnMeta){
 			return true;
@@ -247,7 +247,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function isFirstPage() 
+	public function isFirstPage()
 	{
 		if($this->hasOwnMeta){
 			return $this->currentPage() <= 1;
@@ -256,7 +256,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function totalRecords() 
+	public function totalRecords()
 	{
 		if($this->totalRecords){
 			return $this->totalRecords;
@@ -265,7 +265,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function lastPage() 
+	public function lastPage()
 	{
 		if($this->hasOwnMeta){
 			return $this->lastPage;
@@ -274,7 +274,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function firstPage() 
+	public function firstPage()
 	{
 		if($this->hasOwnMeta){
 			return 1;
@@ -283,7 +283,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function perPage() 
+	public function perPage()
 	{
 		if($this->hasOwnMeta){
 			return $this->perPage;
@@ -292,7 +292,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function currentPage() 
+	public function currentPage()
 	{
 		if($this->hasOwnMeta){
 			return $this->currentPage;
@@ -301,7 +301,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function nextPageNumber() 
+	public function nextPageNumber()
 	{
 		if($this->hasOwnMeta){
 			return $this->currentPage + 1;
@@ -310,7 +310,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function previousPageNumber() 
+	public function previousPageNumber()
 	{
 		if($this->hasOwnMeta){
 			return $this->currentPage -1;
@@ -319,7 +319,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function processRecordSweep() 
+	public function processRecordSweep()
 	{
 		if($this->all || !$this->builder->shouldPaginate()){
 			$this->recursiveRecordCollection();
@@ -342,7 +342,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		}
 	}
 
-	public function updateMeta() 
+	public function updateMeta()
 	{
 		$this->hasOwnMeta = true;
 		$this->perPage = $this->maxQueries * $this->apiPerPage;
@@ -363,7 +363,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		return $this;
 	}
 
-	public function resetPage() 
+	public function resetPage()
 	{
 		$this->items = new Collection;
 	}
@@ -395,7 +395,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 		} else {
 			throw new OutOfResultSetException();
 		}
-			
+
 		return $this;
 	}
 
@@ -419,7 +419,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
         return $this->items;
     }
 
-	public function getResults() 
+	public function getResults()
 	{
 		return $this->getCollection();
 	}
@@ -461,7 +461,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
         ];
     }
 
-    public function itemsToArray() 
+    public function itemsToArray()
     {
     	$data = [];
     	foreach($this->items as $item){

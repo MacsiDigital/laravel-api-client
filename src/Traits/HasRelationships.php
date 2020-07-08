@@ -14,7 +14,7 @@ use MacsiDigital\API\Support\Relations\BelongsToMany;
 trait HasRelationships
 {
     protected $IdSuffix = '_id';
-    
+
     protected $relations = [];
 
     protected $results = [];
@@ -24,7 +24,7 @@ trait HasRelationships
 
     protected $loadRaw = false;
 
-    protected function resolveRelationName($name) 
+    protected function resolveRelationName($name)
     {
         if($name == ''){
             $name = debug_backtrace()[2]['function'];
@@ -37,7 +37,7 @@ trait HasRelationships
         return $name;
     }
 
-    protected function resolveRelationField($related, $field, $name) 
+    protected function resolveRelationField($related, $field, $name)
     {
         if(method_exists($related, 'getRelations')){
             if($field == ''){
@@ -94,12 +94,12 @@ trait HasRelationships
         return $this->getRelation($name);
     }
 
-    public function has($relationship) 
+    public function has($relationship)
     {
         // Need to check if relationship exists
     }
 
-    public function doesntHave($relationship) 
+    public function doesntHave($relationship)
     {
         // Need to check if relationship exists
     }
@@ -210,13 +210,13 @@ trait HasRelationships
         return $this;
     }
 
-    public function getModelName() 
+    public function getModelName()
     {
         $segments = explode('\\', static::class);
         return strtolower(end($segments));
     }
 
-    public function isRelationship($key) 
+    public function isRelationship($key)
     {
         if(method_exists($this, $key) || method_exists($this, Str::studly($key)) || method_exists($this, Str::snake($key))){
             return true;
