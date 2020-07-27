@@ -18,7 +18,7 @@ class PersistResource
 
     protected $attributes = [];
 
-    public function fill(object $object, $type="insert")
+    public function fill($object, $type="insert")
     {
         $this->object = $object;
         $this->{'fillFor'.ucfirst($type)}($object);
