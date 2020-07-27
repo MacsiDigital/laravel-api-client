@@ -31,7 +31,7 @@ class PersistResource
         return $this;
     }
 
-    protected function fillForInsert(object $object)
+    protected function fillForInsert($object)
     {
         foreach ($object->getAttributes() as $key => $value) {
             if(Arr::exists($this->getPersistAttributes(), $key)){
@@ -56,7 +56,7 @@ class PersistResource
         }
     }
 
-    protected function fillForUpdate(object $object)
+    protected function fillForUpdate($object)
     {
         if($object->updatesOnlyDirty()){
             $data = $object->getDirty();
