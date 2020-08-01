@@ -116,10 +116,12 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 			$this->incrementTotalDownloads(count($array[$this->resource->getApiMultipleDataField()]));
 			return $this;
 		} else{
-			foreach($array[$this->resource->getApiMultipleDataField()] as $object){
-				$this->items->push($this->resource->newFromBuilder($this->resource->passOnAttributes($object)));
-				$this->incrementTotalDownloads();
-			}
+		    if(isset($array[$this->resource->getApiMultipleDataField()])){
+                foreach($array[$this->resource->getApiMultipleDataField()] as $object){
+                    $this->items->push($this->resource->newFromBuilder($this->resource->passOnAttributes($object)));
+                    $this->incrementTotalDownloads();
+                }
+            }
 		}
 	}
 

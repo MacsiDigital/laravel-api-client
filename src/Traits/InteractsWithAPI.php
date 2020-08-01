@@ -387,7 +387,7 @@ trait InteractsWithAPI
         }
 
         $resource = (new $this->updateResource)->fill($this, 'update');
-        
+
         if($resource->getAttributes() != []){
 
             $validator = $resource->validate();
@@ -611,6 +611,11 @@ trait InteractsWithAPI
     {
         if (! ($this->exists())) {
             return;
+        }
+
+        if(method_exists($this, 'find'))
+        {
+            return $this->find($this->getKey());
         }
 
         return $this->newQuery()->find($this->getKey());
