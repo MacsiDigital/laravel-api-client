@@ -273,7 +273,7 @@ class Builder
 
     }
 
-    public function get()
+    public function get($type = 'get')
     {
         if($this->resource->beforeQuery($this) === false){
             return;
@@ -281,18 +281,12 @@ class Builder
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get'),
             $this->addPagination($this->combineQueries())
-        ]), 'get');
+        ]), $type);
     }
 
     public function getOne()
     {
-        if($this->resource->beforeQuery($this) === false){
-            return;
-        }
-        return $this->handleResponse($this->sendRequest('get', [
-            $this->retreiveEndPoint('get'),
-            $this->addPagination($this->combineQueries())
-        ]), 'individual');
+        return $this->get('individual');
     }
 
     public function post($attributes, $type="individual")

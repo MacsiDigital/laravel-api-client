@@ -611,6 +611,11 @@ trait InteractsWithAPI
             return;
         }
 
+        if(method_exists($this, 'find'))
+        {
+            return $this->find($this->getKey());
+        }
+
         return $this->newQuery()->find($this->getKey());
     }
 
