@@ -33,7 +33,7 @@ class ResultSet implements Arrayable, ArrayAccess, Countable, IteratorAggregate,
 
 	protected $paginationMethod = 'fresh';
 
-	protected $items;
+	protected $items = [];
 	protected $downloaded = 0;
 
 	protected $raw = false;
