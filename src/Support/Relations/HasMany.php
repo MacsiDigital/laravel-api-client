@@ -160,7 +160,9 @@ class HasMany extends Relation
 
     public function getRelationFromApi()
     {
-        $this->relation = $this->newRelation($this->updateFields([]))->setPassOnAttributes($this->getUpdateKeys())->all();
+        if(method_exists($relation = $this->newRelation($this->updateFields([])), 'setPassOnAttributes')) {
+            $this->relation = $relation->setPassOnAttributes($this->getUpdateKeys())->all();
+        }
         if($this->hasUpdateFields()){
             foreach($this->relation as $object){
                 $this->updateFields($object);
@@ -201,7 +203,10 @@ class HasMany extends Relation
         if($this->relation->count() > 0 && method_exists($this->relation, $method)){
             return $this->forwardCallTo($this->relation, $method, $parameters);
         } else {
-            $relation = $this->newRelation($this->updateFields([]))->setPassOnAttributes($this->getUpdateKeys());
+            $relation = $this->newRelation($this->updateFields([]));
+            if(method_exists($relation, 'setPassOnAttributes')){
+                $relation->setPassOnAttributes($this->getUpdateKeys());
+            }
             return $this->forwardCallTo($relation, $method, $parameters);
         }
     }
