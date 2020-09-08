@@ -1,4 +1,14 @@
-# Laravel package for Building API Client's
+# Laravel API Client
+
+## Laravel package for Building API Client's
+
+![Header Image](https://github.com/MacsiDigital/repo-design/raw/master/laravel-api-client/header.png)
+
+<p align="center">
+ <a href="https://github.com/MacsiDigital/laravel-api-client/actions?query=workflow%3Atests"><img src="https://github.com/MacsiDigital/laravel-api-client/workflows/Run%20tests/badge.svg" style="max-width:100%;"  alt="tests badge"></a>
+ <a href="https://packagist.org/packages/macsidigital/laravel-api-client"><img src="https://img.shields.io/packagist/v/macsidigital/laravel-api-client.svg?style=flat-square" alt="version badge"/></a>
+ <a href="https://packagist.org/packages/macsidigital/laravel-api-client"><img src="https://img.shields.io/packagist/dt/macsidigital/laravel-api-client.svg?style=flat-square" alt="downloads badge"/></a>
+</p>
 
 An API Client Builder Library
 
@@ -12,15 +22,15 @@ composer require macsidigital/laravel-api-client
 
 ## Versions
 
-1.0 - Laravel 5.5 - 5.8 - Bug fixes only, mainly there for backward compatibility, if there are any issues then create a pull request.
+1.0 - Laravel 5.5 - 5.8 - Deprecated and no longer maintained.
 
 2.0 - Laravel 6.0 - Maintained, again feel free to create pull requests.  This is open source which is a 2 way street.
 
-3.0 - Laravel 7.0 - Maintained, again feel free to create pull requests.  This is open source which is a 2 way street.
+3.0 - Laravel 7.0 - 8.0 - Maintained, again feel free to create pull requests.  This is open source which is a 2 way street.
 
 ## Usage
 
-The main aim of this library is to add a common set of traits to models to be able to create, update, retrieve and delete records when accessing API's.  Obviously all API's are different so you should check documentation on how best to implement with these traits.
+The main aim of this library is to add a common set of traits to models to be able to create, update, retrieve and delete records when accessing APIs.  Obviously all APIs are different, so you should check documentation on how best to implement with these traits.
 
 The basic concept is you build a client in the API library that you create which extends on the models in this library.
 
@@ -36,7 +46,7 @@ List of Attributes
 	// Where the models are
 	protected $modelNamespace = '';
 
-    // deafult query string names for page and per_page fields
+    // default query string names for page and per_page fields
     protected $perPageField = 'page_size';
     protected $pageField = 'page';
 
@@ -46,7 +56,7 @@ List of Attributes
     // Should return raw responses and not models/resultsets
     protected $raw = false;
 
-    // Shoule we throw exceptions in cases where a server error occurs
+    // Should we throw exceptions in cases where a server error occurs
     protected $throwExceptionsIfRaw = false;
 
     // Should results be paginated by default.
@@ -64,9 +74,9 @@ List of Attributes
     // for unlimited queries. This of course will eat up any rate limits
     protected $maxQueries = '5';
 
-    // Most API's should include pagination data - this is the fields we should be looking for
+    // Most APIs should include pagination data - this is the fields we should be looking for
     // in the response to get this information.  We can use names or dot notation,
-    // so for exmple 'current_page' or 'meta.current_page'
+    // so for example 'current_page' or 'meta.current_page'
     protected $resultsPageField = 'meta.current_page';
     protected $resultsTotalPagesField = 'meta.last_page';
     protected $resultsPageSizeField = 'meta.per_page';
@@ -77,7 +87,7 @@ List of Attributes
     protected $defaultOperand = '=';
 ```
 
-MOst of these are self explanitory, there is a magic method attribute in there, if we return raw data than we receive the actual response without any error checking.  if we set $throwExceptionsIfRaw = true, then we still receive raw data but it will check to make sure that the return was successful and not an error. If we receive an error it will throw a HttpException.  You can also set this on teh fly by calling withExcptions() on a query.
+Most of these are self-explanatory, there is a magic method attribute in there, if we return raw data than we receive the actual response without any error checking.  if we set $throwExceptionsIfRaw = true, then we still receive raw data, but it will check to make sure the return was successful and not an error. If we receive an error it will throw a HttpException.  You can also set this on teh fly by calling with Exceptions() on a query.
 
 In your extended Entry model implementation you have to define a newRequest function, this is where the logic for how we 1connect will go and should return a MacsiDigital\API\Support\Factory object, which is better renamed to Client in your implementation, which will resolve the API Gateway Client.
 
@@ -129,17 +139,17 @@ There is also a function in the entry class that returns the builder class to us
 
 We by default use standard RESTful method calls:-
 
-- get - retreive records
+- get - retrieve records
 - post - create a record
 - patch - update a record
 - put - replace a record
 - delete - delete a record
 
-We also add a find call, as most api's have different endpoints for get and find.
+We also add a find call, as most APIs have different endpoints for get and find methods.
 
-- find - retreive a single record
+- find - retrieve a single record
 
-However some API's have different ideas on what methods to call (we are looking at you Xero).
+However, some APIs have different ideas on what methods to call (we are looking at you Xero).
 
 So you override the default create and update methods by adding these attributes or methods to your models
 
@@ -159,7 +169,7 @@ So you override the default create and update methods by adding these attributes
     }
 ```
 
-Also some implementations, looking at you again Xero, use update methods to create models and create methods for updating models, so you may need to override the end point functions in the resource model. We have added logic to try to automatically get around this but if you are having problems then set them manually in your model.
+Also, some implementations, looking at you again Xero, use update methods to create models and create methods for updating models, so you may need to override the end point functions in the resource model. We have added logic to try to automatically get around this but if you are having problems then set them manually in your model.
 
 Xero uses a patch request for creating models and post request for updating models.
 
@@ -187,19 +197,19 @@ Xero uses a patch request for creating models and post request for updating mode
     }
 ```
 
-## Retreiving models
+## Retrieving models
 
-You can retrieve a single model by either using the find method and passing an ID, or an array of ID's, or by running a query and returning first() or last();
+You can retrieve a single model by either using the find method and passing an ID, or an array of IDs, or by running a query and returning first() or last();
 
 ```php
 	$user = API::user()->find('ID');
 
-	$user = API::user()->where('Name', 'Bob')->first(); // First occurence
+	$user = API::user()->where('Name', 'Bob')->first(); // First occurrence
 
-    $user = API::user()->where('Name', 'Bob')->last(); // Last occurence
+    $user = API::user()->where('Name', 'Bob')->last(); // Last occurrence
 ```
 
-You can also use get and all to retreive many models, this will return a Result Set, which is an enhanced Laravel Collection.
+You can also use get and all to retrieve many models, this will return a Result Set, which is an enhanced Laravel Collection.
 
 ```php
 	$users = API::account()->all();
@@ -207,7 +217,7 @@ You can also use get and all to retreive many models, this will return a Result 
 	$users = API::account()->where('Type', 'Admin')->get();
 ```
 
-Some API's (Yes Xero) return single results wrapped in an array, like multi record searches's.  So you can override the hydrate() method on the builder model.
+Some APIs (Yes Xero) return single results wrapped in an array, like multi record searches.  So you can override the hydrate() method on the builder model.
 
 ```php
 	protected function hydrate($response)
@@ -218,13 +228,13 @@ Some API's (Yes Xero) return single results wrapped in an array, like multi reco
 
 ## Result Sets
 
-After we run a multi result return type like all() and get(), we are returned a result set.  This takes care of any pagination and can be used to dip back into the Gateway to retreive the next lot of results, houses information on what page we navigated, whats the next page etc.  This is dependant on API and we try to utilise the API's returned meta where possible.
+After we run a multi result return type like all() and get(), we are returned a result set.  This will take care of any pagination and can be used to dip back into the Gateway to retrieve the next lot of results, houses information on what page we navigated, what is the next page etc.  This is dependant on the API, and we try to utilise the APIs returned meta where possible.
 
 ### all() return method
 
-With the all() method we try to retrieve all results by recursivly hitting the API endpoint, because this can use rate limits quite quickly there is a $maxQueries attribute in our entry model, once set this is the max amount of queries that can be hit in a recursive call.
+With the all() method we try to retrieve all results by recursively hitting the API endpoint, because this can use rate limits quite quickly there is a $maxQueries attribute in our entry model, once set this is the max amount of queries that can be hit in a recursive call.
 
-If the max is hit and you require more results then you can call the retreiveNextPage() method which will add the next round of queries to the result set.
+If the max is hit and you require more results then you can call the retrieveNextPage() method which will add the next round of queries to the result set.
 
 ### get() return method
 
@@ -236,14 +246,14 @@ We use get() just like laravel, when we need to filter, order or paginate.
 
 As noted result sets are just like laravel collections, with additional functions.
 
-So if our API only returns 30 results per page, our all method will do its best to return as many results as it can.  But this will generally lead to some pagination.  So to retrieve the next set of results we can do the following.
+So if our API only returns 30 results per page, our all method will do its best to return as many results as it can.  This will generally lead to some pagination.  So to retrieve the next set of results we can do the following.
 
 ```php
     $meetings = $user->meetings;
     // Do some logic and discover need more results
     $meetings = $meetings->nextPage();
 
-    // $meetings->previousePage() will go back a page.
+    // $meetings->previousPage() will go back a page.
 
     // We can also iterate directly over the returned results
     foreach($meetings->nextPage() as $meeting)
@@ -270,15 +280,15 @@ So if our API only returns 30 results per page, our all method will do its best 
 
 The previousPage() method will go back a page, we cache the results so going back will not make an api call but pull the cached results.
 
-Sometimes you may also want to accumulate records, to do this you can call the getNextRecords() method.  But please note not to mix this method with the next and previous page methods.
+Sometimes you may also want to accumulate records, to do this you can call the getNextRecords() method.  Please note not to mix this method with the next and previous page methods.
 
 ```php
-    // will add more records to the current record set. The amount of records retriieved is based on the maxQueries and per page methods.
+    // will add more records to the current record set. The amount of records retrieved is based on the maxQueries and per page methods.
     $meetings->getNextRecords();
 ```
 
-// Need to check this as think Xero doesnt return page counts.
-If you try to retreive more records than there is available an exception will be thrown
+// Need to check this as think Xero doesn't return page counts.
+If you try to retrieve more records than there is available, then an exception will be thrown.
 
 ### Links
 
@@ -296,7 +306,7 @@ If you would like to receive the raw response from the query then set raw on the
 
 ## Http Errors
 
-If there are any errors returned from our call and the response is not set to raw then we will throw a new Http Exception.  We have some default behaviour but different API's have different responses to errors.  So you can override the prepareHttpErrorMessage() method on the builder model to customise the Exception message.
+If there are any errors returned from our call and the response is not set to raw then we will throw a new Http Exception.  We have some default behaviour but different APIs have different responses to errors.  So you can override the prepareHttpErrorMessage() method on the builder model to customise the Exception message.
 
 ```php
 	$json = $response->json();
@@ -319,7 +329,7 @@ We utilise Laravel's hasAttributes trait in the models so you should be able to 
 
 ### Resources
 
-These are generally gesources that are returned as relationships of other models but do not interact with the API directly.  To create one extend the MacsiDigital/API/Support/Resource.
+These are generally resources that are returned as relationships of other models but do not interact with the API directly.  To create one extend the MacsiDigital/API/Support/Resource.
 
 This should only be used on models that are returned as a sub array of a called model.
 
@@ -337,7 +347,7 @@ In these models we also house many variables, like primary key and api endpoints
 	// create -> post
 	// show -> first
 	// update -> patch or put
-	// delte -> delete
+	// delete -> delete
     protected $allowedMethods = ['index', 'create', 'show', 'update', 'delete'];
 
     protected $endPoint = 'user';
@@ -349,10 +359,10 @@ In these models we also house many variables, like primary key and api endpoints
 
     protected $primaryKey = 'id';
 
-    // Most API's return data in a data attribute.  However we need to override on a model basis as some like Xero return it as 'Users' or 'Invoices'
+    // Most APIs return data in a data attribute.  However we need to override on a model basis as some like Xero return it as 'Users' or 'Invoices'
     protected $apiDataField = 'data'; 
 
-    // Also, some API's return 'users' for multiple and user for single, set teh multiple field below to wheat is required if different
+    // Also, some APIs return 'users' for multiple and user for single, set teh multiple field below to wheat is required if different
     protected $apiMultipleDataField = 'data'; 
 ```
 The apiData and apiMultiple fields dictate what field in the response will house the main body data, this should be 'data' in a good api but it really does vary.  Zoom uses 'users' for multiple records and '' for single.
@@ -365,7 +375,7 @@ If apiDataField is set to '' it will return the body direct.
 
 Xero also uses a different method.
 
-In the case of Xero it can be overwritten in the getApiMultipleDataField function so that we dont have to set on all models.
+In the case of Xero it can be overwritten in the getApiMultipleDataField function so that we don't have to set on all models.
 
 ```php
 	public function getApiMultipleDataField()
@@ -375,7 +385,7 @@ In the case of Xero it can be overwritten in the getApiMultipleDataField functio
     }
 ```
 
-In a similar way we can override the priamryKey as some api's will keep the ID field as UserID by creating the following function
+In a similar way we can override the primaryKey as some api's will keep the ID field as UserID by creating the following function
 
 ```php
 	public function getKeyName()
@@ -392,7 +402,7 @@ A quick note on endpoints, we can set an endpoint as 'users' but we can also inc
     protected $endPoint = 'users/{user:id}/settings';
 ```
 
-We can also set customEndpoints on a model for specific endPoints, if the endPoints dont follow convention.
+We can also set customEndpoints on a model for specific endPoints, if the endPoints don't follow convention.
 
 ```php
     protected $customEndPoints = [
@@ -411,7 +421,7 @@ By default we will try to create relationship objects for any returned input if 
 	protected $loadRaw = false;
 ```
 
-There may be times where you want some autoloading but not allow all connected models to autoload, in this case you can set any models that should not autoload by setting them like so:-
+There may be times where you want some auto-loading but not allow all connected models to autoload, in this case you can set any models that should not autoload by setting them like so:-
 
 ```php
 	protected $dontAutoloadRelation = ['Address'];
@@ -437,7 +447,7 @@ This could also be a HasMany relationship and the reverse on the address would b
 
 A name and a field can be passed as a 2nd and 3rd argument.  A 4th argument can also passed which will be any fields and values in an array that should be passed onto all relationship models.  This is handy when you need to track a parent's id on teh child model.
 
-We try to automatically work out the name and field attributes if not passed for you based on the function name, so we will look for a field 'user_id' in the array 'users' in the above method. However not all API's use the same id naming so you can set the IDSuffix by adding this to your model.
+We try to automatically work out the name and field attributes if not passed for you based on the function name, so we will look for a field 'user_id' in the array 'users' in the above method. However not all APIs use the same id naming so you can set the IDSuffix by adding this to your model.
 
 ```php
 	protected $IdSuffix = 'ID';
@@ -447,9 +457,9 @@ We try to automatically work out the name and field attributes if not passed for
 
 With the name field we will check results for User and user
 
-Its worth pointing out that this is case sensitive so User and user will give different results, UserID and userID.  Again this is due to all API's being different.
+Its worth pointing out that this is case sensitive so User and user will give different results, UserID and userID.  Again this is due to all APIs being different.
 
-Its also worth pointing out that some resources dont interact directly with the API, in these cases the field is ignored.
+Its also worth pointing out that some resources don't interact directly with the API, in these cases the field is ignored.
 
 At present we do not have the ability for Many to Many but will see if there is a need in our API building quests.
 
@@ -505,7 +515,7 @@ When the relation models do not interact with the api then we expose new make() 
     $user->address()->attach($address);
 ```
 
-This works well when relationships are returned direct as part of an API call, which is common in API's.  However sometimes API's dont send these items direct and therefore need different end point calls.
+This works well when relationships are returned direct as part of an API call, which is common in APIs.  However sometimes APIs don't send these items direct and therefore need different end point calls.
 
 In these cases we use custom relationship models
 
@@ -513,7 +523,7 @@ In these cases we use custom relationship models
 
 First you need to extend either the HasOne or HasMany relationship models.
 
-Within the extended model you need to create the logic for retreiving, creating, updating and deleting as is required by the API.  Unfortunetly as these are all case specific you will need to create CustomRelations models for any implementation required.
+Within the extended model you need to create the logic for retrieving, creating, updating and deleting as is required by the API.  Unfortunately as these are all case specific you will need to create CustomRelations models for any implementation required.
 
 To call it we call the hasCustom method and pass the model class as the 2nd parameter.  Parameters 3 and 4 can still be the name and field and 5 any fields and values to add to any new models.
 
@@ -529,7 +539,7 @@ The custom class will need a constructor, a save, saveMany (for hasMany), create
 
 This really gives a blank canvas to be able to get those pain in the butt endpoints into your API.
 
-Sometimes relationships are not returned as part of the request and have to be called seperatly.  Sometimes this may mean hitting a different endpoint, which is set in the model, see note on endPoints above.
+Sometimes relationships are not returned as part of the request and have to be called separately.  Sometimes this may mean hitting a different endpoint, which is set in the model, see note on endPoints above.
 
 We can also override the default with customEndPoints on a per model basis.
 
@@ -562,9 +572,9 @@ And of course you can stack where clauses
 	$posts = API::post()->where('created_at', '>', '2019-01-01')->where('created_at', '<', '2019-12-31')->get();
 ```
 
-At present we only cover the where and whereIn, the latter will only work with the ID field, but we intend to add more of the laravel where clauses, like whereBetween if we find there is support for this in API's.
+At present we only cover the where and whereIn, the latter will only work with the ID field, but we intend to add more of the laravel where clauses, like whereBetween if we find there is support for this in APIs.
 
-Now as noted all API's are different so generally we have to customise the filter logic.
+Now as noted all APIs are different so generally we have to customise the filter logic.
 
 First of all you need to create a Builder model that extends the Support/Builder model.
 
@@ -591,7 +601,7 @@ In this builder class you would then create functions that are called when filte
     }
 ```
 
-As arrays cant use symbols as keys we do some translating, so if '=' is called we will change this to AddWhereEquals and processWhereEquals, the list below is of the trnslations we make.
+As arrays cant use symbols as keys we do some translating, so if '=' is called we will change this to AddWhereEquals and processWhereEquals, the list below is of the translations we make.
 
 ```php
 	case '=':
@@ -703,7 +713,7 @@ Now each API will handle filtering differently so the logic in these methods are
 
 As we create custom filter methods, this makes filtering easy and extremely powerful, but it really does depend on what the API allows to be done.
 
-So as an example in Xero we can apply a If-Modified-Since header to our request to retrive only models modified since a specific date, this can be achieved like so.
+So as an example in Xero we can apply a If-Modified-Since header to our request to retrieve only models modified since a specific date, this can be achieved like so.
 
 ```php
 	// you would need to spoof the column name, as its not used but is still required. 
@@ -723,7 +733,7 @@ So as an example in Xero we can apply a If-Modified-Since header to our request 
 	}
 ```
 
-Of course for these sorts of custom actions we have to update the allowed operands field within our Entry model to allow them to be apllied.
+Of course for these sorts of custom actions we have to update the allowed operands field within our Entry model to allow them to be applied.
 
 ```php
 	protected $allowedOperands = ['=', '!=', '<', '>', '<=', '>=', '<>', 'like', 'ModifiedAfter'];
@@ -731,7 +741,7 @@ Of course for these sorts of custom actions we have to update the allowed operan
 
 ## Creating and Updating
 
-Generally in API's the attributes required for saving and updating are different, and they are in turn different to the attributes when a model is retrieved.  We therefore utilise 'Persistance' models which will house validation logic and the attributes required to make a successful save.  So in our models we need to Extend the InteractsWithAPI trait and add the following 2 protected attributes.
+Generally in APIs the attributes required for saving and updating are different, and they are in turn different to the attributes when a model is retrieved.  We therefore utilise 'Persistence' models which will house validation logic and the attributes required to make a successful save.  So in our models we need to Extend the InteractsWithAPI trait and add the following 2 protected attributes.
 
 ```php
 	protected $insertResource = 'MacsiDigital\API\Dev\Resources\StoreAddress';
@@ -747,7 +757,7 @@ The Insert and Update resources should extend the MacsiDigital/API/Support/Persi
     	'password' => 'required|string|max:10',
     ];
 ```
-As you can see we set the field and any regular Laravel validation logic in the persistAttribute, if there is no validion we can pass ''.
+As you can see we set the field and any regular Laravel validation logic in the persistAttribute, if there is no validation we can pass ''.
 
 We can also extend this to include relationships.  It may look like so:-
 
@@ -776,7 +786,7 @@ When utilising the relationships in this way it will dip into the linked resourc
 
 ```
 
-We can pass an array directly into the relatedResource attribute if we dont want to create a persistant resource.
+We can pass an array directly into the relatedResource attribute if we don't want to create a persistent resource.
 
 ```php
     protected $relatedResource = [
@@ -809,7 +819,7 @@ We can use a mix of the above, its not one or the other.
 
 ### Mutating
 
-Some API's will mutate the data, a common case is wrapping the fields in a new array.  
+Some APIs will mutate the data, a common case is wrapping the fields in a new array.  
 
 ```php
     //Normal create
@@ -818,7 +828,7 @@ Some API's will mutate the data, a common case is wrapping the fields in a new a
         'email' => 'john@Example.com'
    ] 
 
-   // Some API's may require
+   // Some APIs may require
    // 
    [
         'action' => 'create',
@@ -857,11 +867,11 @@ To save its as simple as calling the save() function.
 	$user->save();
 ```
 
-THe model will see if it already exists and call the correct insert or update method.  If updating we will only pass dirty attributes to the persistance model.
+THe model will see if it already exists and call the correct insert or update method.  If updating we will only pass dirty attributes to the persistence model.
 
 You can also utilise other laravel methods like make, create and update directly in the model.
 
-We pass back helpful exceptions if it fails due to the API rejecting it. For example some API's will have unusual rules, in Xero you can only pass multiple contacts if you supply email addresses, in this case we would get back an exception:-
+We pass back helpful exceptions if it fails due to the API rejecting it. For example some APIs will have unusual rules, in Xero you can only pass multiple contacts if you supply email addresses, in this case we would get back an exception:-
 
 ```bash
 MacsiDigital/API/Exceptions/HttpException with message 'A validation exception occurred : Additional people cannot be added when the primary person has no email address set.'
@@ -894,22 +904,27 @@ We have tried to make that as easy as possible, each model has the API client in
 ```
 Nice and simple.
 
-### Changelog
+## ToDo
 
-Please see [CHANGELOG](CHANGELOG.md) for more information what has changed recently.
+- Proper Documentation
+- Tests
+
+## Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### Security
+## Security
 
-If you discover any security related issues, please email security@macsi.co.uk instead of using the issue tracker.
+If you discover any security-related issues, please email [info@macsi.co.uk](mailto:info@masi.co.uk) instead of using the issue tracker.
 
 ## Credits
 
-- [MacsiDigital](https://github.com/macsidigital)
-- [ColinHall](https://github.com/colinhall17)
+- [Colin Hall](https://github.com/ColinHall)
+- [MacsiDigital](https://github.com/MacsiDigital)
 - [All Contributors](../../contributors)
 
 We use a lot of Laravel type functions taken directly from Laravel, or taken and modified so we also have to credit the Laravel team.
