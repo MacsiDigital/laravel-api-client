@@ -7,5 +7,4 @@ use Illuminate\Database\Eloquent\Concerns\HidesAttributes as LaravelHidesAttribu
 trait HidesAttributes
 {
     use LaravelHidesAttributes;
-
 }

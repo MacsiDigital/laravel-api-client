@@ -2,10 +2,6 @@
 
 namespace MacsiDigital\API\Support\Relations;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
-use Illuminate\Support\Collection;
-
 class BelongsTo extends Relation
 {
     protected $relation;
@@ -21,34 +17,31 @@ class BelongsTo extends Relation
         $this->field = $field;
     }
 
-    protected function hydrate($data) 
+    protected function hydrate($data)
     {
-        if($data != []){
+        if ($data != []) {
             $this->relation = $this->related->newFromBuilder($data);
         } else {
             $this->relation = $this->related->newInstance();
-        } 
+        }
     }
 
     public function getResults()
     {
-    	if($this->relation->exists()){
-    		return $this->relation;
-    	} else if(isset($owner->$field) && $owner->$field != null) {
-    		return $this->relation = $this->related->newQuery()->find($owner->$field);
-    	} else {
-    		return $this->relation;
-    	}
+        if ($this->relation->exists()) {
+            return $this->relation;
+        } elseif (isset($owner->$field) && $owner->$field != null) {
+            return $this->relation = $this->related->newQuery()->find($owner->$field);
+        } else {
+            return $this->relation;
+        }
     }
 
-    public function associate($object) 
+    public function associate($object)
     {
-        
     }
 
-    public function dissociate() 
+    public function dissociate()
     {
-        
     }
-
 }

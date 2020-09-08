@@ -3,8 +3,8 @@ namespace MacsiDigital\API\Support;
 
 use MacsiDigital\API\Contracts\Entry;
 use MacsiDigital\API\Traits\HasAttributes;
-use MacsiDigital\API\Traits\HidesAttributes;
 use MacsiDigital\API\Traits\HasRelationships;
+use MacsiDigital\API\Traits\HidesAttributes;
 
 class Resource
 {
@@ -168,12 +168,12 @@ class Resource
         $this->setAttribute($key, $value);
     }
 
-     /**
-     * Determine if the given attribute exists.
-     *
-     * @param  mixed  $offset
-     * @return bool
-     */
+    /**
+    * Determine if the given attribute exists.
+    *
+    * @param  mixed  $offset
+    * @return bool
+    */
     public function offsetExists($offset)
     {
         return ! is_null($this->getAttribute($offset));
@@ -256,5 +256,4 @@ class Resource
     {
         return $this->toJson();
     }
-
 }

@@ -4,17 +4,15 @@ namespace MacsiDigital\API\Support;
 
 use BadMethodCallException;
 use Illuminate\Support\Str;
-use MacsiDigital\API\Facades\Client;
-use MacsiDigital\API\Support\Builder;
-use MacsiDigital\API\Facades\ClientContract;
-use MacsiDigital\API\Exceptions\NoClientSetException;
 use MacsiDigital\API\Contracts\Entry as EntryContract;
+use MacsiDigital\API\Exceptions\NoClientSetException;
 use MacsiDigital\API\Exceptions\NodeNotFoundException;
+use MacsiDigital\API\Facades\Client;
 
 abstract class Entry implements EntryContract
 {
-    // The Entry model is where we build our API gateway and set the defaults.  
-    // This should be extended in the core API, with a newRequest() method 
+    // The Entry model is where we build our API gateway and set the defaults.
+    // This should be extended in the core API, with a newRequest() method
     // that returns the client.
     
     protected $modelNamespace = '';
@@ -40,7 +38,7 @@ abstract class Entry implements EntryContract
     protected $maxPaginationRecords = '100';
     protected $minPaginationRecords = '1';
 
-    // If not paginated, how many queries should we allow per search, leave '' or 0 
+    // If not paginated, how many queries should we allow per search, leave '' or 0
     // for unlimited queries. This of course will eat up any rate limits
     protected $maxQueries = '5';
 
@@ -63,14 +61,16 @@ abstract class Entry implements EntryContract
 
     public function __call($method, $parameters)
     {
-        if(method_exists($this, $method)){
+        if (method_exists($this, $method)) {
             return $this->$method(...$parameters);
         } else {
             try {
                 return $this->$method;
-            } catch(NodeNotFoundException $e){
+            } catch (NodeNotFoundException $e) {
                 throw new BadMethodCallException(sprintf(
-                    'Call to undefined method %s::%s()', static::class, $method
+                    'Call to undefined method %s::%s()',
+                    static::class,
+                    $method
                 ));
             }
         }
@@ -81,7 +81,7 @@ abstract class Entry implements EntryContract
         return $this->getNode($key);
     }
 
-    public function getBuilderClass() 
+    public function getBuilderClass()
     {
         return Builder::class;
     }
@@ -92,25 +92,28 @@ abstract class Entry implements EntryContract
         if (class_exists($class)) {
             return new $class($this);
         }
+
         throw new NodeNotFoundException('No node with name '.$key);
     }
 
     public function getRequest()
     {
-        if(!$this->hasRequest()){
+        if (! $this->hasRequest()) {
             $this->setReqeust($this->newRequest());
         }
+
         return $this->request;
     }
 
-    public function hasRequest() 
+    public function hasRequest()
     {
         return $this->request != null;
     }
 
-    public function setRequest($request) 
+    public function setRequest($request)
     {
         $this->request = $request;
+
         return $this;
     }
 
@@ -126,7 +129,7 @@ abstract class Entry implements EntryContract
 
     public function getPageField()
     {
-        return $this->pageField;   
+        return $this->pageField;
     }
 
     public function getAllowedOperands()
@@ -141,52 +144,52 @@ abstract class Entry implements EntryContract
 
     public function getDefaultPaginationRecords()
     {
-        if($this->defaultPaginationRecords == '')
-        {
+        if ($this->defaultPaginationRecords == '') {
             return 20;
         }
+
         return $this->defaultPaginationRecords;
     }
 
     public function getMaxPaginationRecords()
     {
-        if($this->maxPaginationRecords == '')
-        {
+        if ($this->maxPaginationRecords == '') {
             return 100;
         }
+
         return $this->maxPaginationRecords;
     }
 
     public function getMinPaginationRecords()
     {
-        if($this->minPaginationRecords == '')
-        {
+        if ($this->minPaginationRecords == '') {
             return 1;
         }
+
         return $this->minPaginationRecords;
     }
     
     public function getPagination()
     {
-        return $this->pagination;   
+        return $this->pagination;
     }
 
     public function getRaw()
     {
-        return $this->raw;    
+        return $this->raw;
     }
 
     public function getThrowExceptionsIfRaw()
     {
-        return $this->throwExceptionsIfRaw;    
+        return $this->throwExceptionsIfRaw;
     }
 
-    public function hasMaxQueryLimit() 
+    public function hasMaxQueryLimit()
     {
-        if($this->maxQueries != '' && $this->maxQueries > 0)
-        {
+        if ($this->maxQueries != '' && $this->maxQueries > 0) {
             return true;
         }
+
         return false;
     }
 
@@ -202,7 +205,7 @@ abstract class Entry implements EntryContract
 
     public function getResultsTotalPagesField()
     {
-        return $this->resultsTotalPagesField;   
+        return $this->resultsTotalPagesField;
     }
 
     public function getResultsPageSizeField()
@@ -212,7 +215,6 @@ abstract class Entry implements EntryContract
 
     public function getResultsTotalRecordsField()
     {
-        return $this->resultsTotalRecordsField;   
+        return $this->resultsTotalRecordsField;
     }
-
 }

@@ -13,6 +13,6 @@ class JWT
 
     public static function decodeToken($jwt, $secret)
     {
-        return FirebaseJWT::decode($jwt, $secret, array('HS256'));
+        return FirebaseJWT::decode($jwt, $secret, ['HS256']);
     }
 }

@@ -5,6 +5,5 @@ use MacsiDigital\API\Traits\InteractsWithAPI;
 
 class ApiResource extends Resource
 {
-	use InteractsWithAPI;
-
+    use InteractsWithAPI;
 }

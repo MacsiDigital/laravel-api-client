@@ -4,7 +4,6 @@ namespace MacsiDigital\API\Contracts;
 
 interface Entry
 {
-
     public function getNode($key);
 
     public function getRequest() ;
@@ -12,5 +11,4 @@ interface Entry
     public function setRequest($request);
 
     public function newRequest();
-
 }
