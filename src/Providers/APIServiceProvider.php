@@ -2,15 +2,13 @@
 
 namespace MacsiDigital\API\Providers;
 
-use MacsiDigital\API\Dev\User;
-use MacsiDigital\API\Support\Entry;
 use Illuminate\Support\ServiceProvider;
+use MacsiDigital\API\Support\Entry;
 
 class APIServiceProvider extends ServiceProvider
 {
-	public function boot()
+    public function boot()
     {
-        
     }
 
     /**
@@ -26,6 +24,5 @@ class APIServiceProvider extends ServiceProvider
         // $this->app->bind(Entry::class, function ($app) {
         //     return new Entry();
         // });
-
     }
 }

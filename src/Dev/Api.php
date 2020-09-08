@@ -16,11 +16,10 @@ class Api extends Entry
         return Client::baseUrl(config('api.base_url'))->withOptions(config('api.options'));
     }
 
-    public function setConfig() 
+    public function setConfig()
     {
         // Normally you would use a proper config file but for our tests we will include it
         $config = include 'config.php';
         config($config);
     }
-
 }

@@ -2,11 +2,10 @@
 
 namespace MacsiDigital\API\Traits;
 
-use LogicException;
-use Illuminate\Support\Str;
-use MacsiDigital\API\Contracts\Relation;
-use MacsiDigital\API\Exceptions\JsonEncodingException;
 use Illuminate\Database\Eloquent\Concerns\HasAttributes as LaravelHasAttributes;
+use Illuminate\Support\Str;
+use LogicException;
+use MacsiDigital\API\Contracts\Relation;
 
 trait HasAttributes
 {
@@ -31,9 +30,10 @@ trait HasAttributes
 
     public function fill(array $attributes)
     {
-        foreach($attributes as $key => $value){
+        foreach ($attributes as $key => $value) {
             $this->setAttribute($key, $value);
         }
+
         return $this;
     }
 
@@ -52,19 +52,20 @@ trait HasAttributes
         return $this->dates;
     }
 
-     /**
-     * Set a given attribute on the model.
-     *
-     * @param  string  $key
-     * @param  mixed  $value
-     * @return $this
-     */
+    /**
+    * Set a given attribute on the model.
+    *
+    * @param  string  $key
+    * @param  mixed  $value
+    * @return $this
+    */
     public function setAttribute($key, $value)
     {
-        if(is_array($value) || is_object($value)){
-            if(method_exists($this, 'setRelation')){
-                if($this->relationLoaded($key)){
+        if (is_array($value) || is_object($value)) {
+            if (method_exists($this, 'setRelation')) {
+                if ($this->relationLoaded($key)) {
                     $this->updateRelationAttribute($key, $value);
+
                     return $this;
                 }
             }
@@ -103,7 +104,7 @@ trait HasAttributes
 
         $this->attributes[$key] = $value;
 
-        if(is_array($value) && method_exists($this, 'setRelation')){
+        if (is_array($value) && method_exists($this, 'setRelation')) {
             $this->setRelationAttribute($key, $value);
         }
 
@@ -112,31 +113,31 @@ trait HasAttributes
 
     protected function setRelationAttribute($key, $value)
     {
-        if($this->loadRaw || in_array($key, $this->dontAutoloadRelation)){
+        if ($this->loadRaw || in_array($key, $this->dontAutoloadRelation)) {
             return;
         }
-        if(static::$snakeAttributes){
+        if (static::$snakeAttributes) {
             $tempKey = Str::camel($key);
         } else {
             $tempKey = $key;
         }
-        if ($this->isRelationship($tempKey)){
+        if ($this->isRelationship($tempKey)) {
             $function = $tempKey;
         } elseif ($this->isRelationship(Str::plural($tempKey))) {
             $function = Str::plural($tempKey);
         }
-        if(isset($function)){
+        if (isset($function)) {
             $this->$function();
         }
     }
 
     protected function updateRelationAttribute($key, $value)
     {
-        if($this->loadRaw || in_array($key, $this->dontAutoloadRelation)){
+        if ($this->loadRaw || in_array($key, $this->dontAutoloadRelation)) {
             return;
         }
 
-        if ($this->isRelationship($key)){
+        if ($this->isRelationship($key)) {
             $this->getRelation($key)->update($value);
         } elseif ($this->isRelationship(Str::plural($key))) {
             $key = Str::plural($key);
@@ -155,7 +156,7 @@ trait HasAttributes
 
         // need to check for a relationship first - otherwise we will be passing back the
         // array if relationship is passed as attributes in the API call
-        if(method_exists($this, 'setRelation') && $this->isRelationship($key)){
+        if (method_exists($this, 'setRelation') && $this->isRelationship($key)) {
             return $this->getRelationValue($key);
         }
 
@@ -210,12 +211,16 @@ trait HasAttributes
         if (! $relation instanceof Relation) {
             if (is_null($relation)) {
                 throw new LogicException(sprintf(
-                    '%s::%s must return a relationship instance, but "null" was returned. Was the "return" keyword used?', static::class, $method
+                    '%s::%s must return a relationship instance, but "null" was returned. Was the "return" keyword used?',
+                    static::class,
+                    $method
                 ));
             }
 
             throw new LogicException(sprintf(
-                '%s::%s must return a relationship instance.', static::class, $method
+                '%s::%s must return a relationship instance.',
+                static::class,
+                $method
             ));
         }
         $this->setRelation($method, $relation);
@@ -235,5 +240,4 @@ trait HasAttributes
     {
         return $this->dateFormat ?: 'Y-m-d H:i:s';
     }
-
 }

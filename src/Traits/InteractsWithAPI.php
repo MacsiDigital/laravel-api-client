@@ -2,14 +2,12 @@
 
 namespace MacsiDigital\API\Traits;
 
-use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use MacsiDigital\API\Support\Builder;
-use MacsiDigital\API\Traits\ForwardsCalls;
-use MacsiDigital\API\Exceptions\KeyNotFoundException;
+use Illuminate\Support\Str;
 use MacsiDigital\API\Exceptions\InvalidActionException;
 use MacsiDigital\API\Exceptions\ValidationFailedException;
+use MacsiDigital\API\Support\Builder;
 
 trait InteractsWithAPI
 {
@@ -62,6 +60,7 @@ trait InteractsWithAPI
     public function setPassOnAttributes(array $keys)
     {
         $this->passOnKeys = $keys;
+
         return $this;
     }
 
@@ -72,24 +71,25 @@ trait InteractsWithAPI
 
     public function passOnAttributes($item)
     {
-        foreach($this->passOnKeys as $key)
-        {
-            if(is_object($item)){
-                if(!isset($item->$key)){
+        foreach ($this->passOnKeys as $key) {
+            if (is_object($item)) {
+                if (! isset($item->$key)) {
                     $item->$key = $this->$key;
                 }
-            } elseif (is_array($item)){
-                if(!isset($item[$key])){
+            } elseif (is_array($item)) {
+                if (! isset($item[$key])) {
                     $item[$key] = $this->$key;
                 }
             }
         }
+
         return $item;
     }
 
     public function query()
     {
         $class = $this->client->getBuilderClass();
+
         return new $class($this);
     }
 
@@ -147,9 +147,10 @@ trait InteractsWithAPI
 
     public function getKeyForEndPoint()
     {
-        if($this->hasKey()){
+        if ($this->hasKey()) {
             return '/'.$this->getKey();
         }
+
         return;
     }
 
@@ -158,13 +159,15 @@ trait InteractsWithAPI
         $this->customEndPoints[$type] = $endPoint;
     }
 
-    public function getEndPoint($type='get')
+    public function getEndPoint($type = 'get')
     {
-        if($this->canPerform($type)){
+        if ($this->canPerform($type)) {
             return $this->resolveBindings($this->{'get'.Str::studly($type).'EndPoint'}());
         } else {
             throw new InvalidActionException(sprintf(
-                '%s action not allowed for %s', Str::studly($type), static::class
+                '%s action not allowed for %s',
+                Str::studly($type),
+                static::class
             ));
         }
     }
@@ -196,64 +199,70 @@ trait InteractsWithAPI
 
     public function getGetEndPoint()
     {
-        if($this->hasCustomEndPoint('get')){
+        if ($this->hasCustomEndPoint('get')) {
             return $this->getCustomEndPoint('get').$this->getKeyForEndPoint();
         }
+
         return $this->endPoint;
     }
 
     public function getFindEndPoint()
     {
-        if($this->hasCustomEndPoint('find')){
+        if ($this->hasCustomEndPoint('find')) {
             return $this->getCustomEndPoint('find').$this->getKeyForEndPoint();
         }
+
         return $this->endPoint;
     }
 
     public function getPostEndPoint()
     {
-        if($this->hasCustomEndPoint('post')){
+        if ($this->hasCustomEndPoint('post')) {
             return $this->getCustomEndPoint('post').$this->getKeyForEndPoint();
         }
+
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function getPatchEndPoint()
     {
-        if($this->hasCustomEndPoint('patch')){
+        if ($this->hasCustomEndPoint('patch')) {
             return $this->getCustomEndPoint('patch').$this->getKeyForEndPoint();
         }
+
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function getPutEndPoint()
     {
-        if($this->hasCustomEndPoint('put')){
+        if ($this->hasCustomEndPoint('put')) {
             return $this->getCustomEndPoint('put').$this->getKeyForEndPoint();
         }
+
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function getDeleteEndPoint()
     {
-
-        if($this->hasCustomEndPoint('delete')){
+        if ($this->hasCustomEndPoint('delete')) {
             return $this->getCustomEndPoint('delete').$this->getKeyForEndPoint();
         }
+
         return $this->endPoint.$this->getKeyForEndPoint();
     }
 
     public function resolveBindings($url)
     {
-        if(Str::contains($url, '{')){
+        if (Str::contains($url, '{')) {
             $pattern = '/{\K[^}]*(?=})/m';
             $n = preg_match($pattern, $url, $matches);
-            if($n > 0){
-                foreach($matches as $match){
+            if ($n > 0) {
+                foreach ($matches as $match) {
                     $url = Str::replaceFirst('{'.$match.'}', $this->{str_replace(':', '_', $match)}, $url);
                 }
             }
         }
+
         return $url;
     }
 
@@ -266,7 +275,7 @@ trait InteractsWithAPI
      */
     public function update(array $attributes = [], array $options = [])
     {
-        if (!$this->hasKey()) {
+        if (! $this->hasKey()) {
             return false;
         }
 
@@ -330,7 +339,7 @@ trait InteractsWithAPI
         // If the "beforeSave" function returns false we'll bail out of the save and return
         // false, indicating that the save failed. This provides a chance for any
         // listeners to cancel save operations if validations fail or whatever.
-        if($this->beforeSave($options, $query) === false){
+        if ($this->beforeSave($options, $query) === false) {
             return;
         }
 
@@ -339,7 +348,6 @@ trait InteractsWithAPI
         // clause to only update this model. Otherwise, we'll just insert them.
         if ($this->exists()) {
             $resource = $this->performUpdate($query);
-
         }
         // If the model is brand new, we'll insert it into our database and set the
         // ID attribute on the model to the value of the newly inserted row's ID
@@ -351,7 +359,7 @@ trait InteractsWithAPI
         // If the model is successfully saved, we need to do a few more things once
         // that is done. We will call the "saved" method here to run any actions
         // we need to happen after a model gets successfully saved right here.
-        if (!$resource->hasApiError()) {
+        if (! $resource->hasApiError()) {
             $this->afterSave($options, $query);
         }
 
@@ -382,14 +390,13 @@ trait InteractsWithAPI
      */
     protected function performUpdate(Builder $query)
     {
-        if($this->beforeUpdate($query) === false){
+        if ($this->beforeUpdate($query) === false) {
             return;
         }
 
         $resource = (new $this->updateResource)->fill($this, 'update');
 
-        if($resource->getAttributes() != []){
-
+        if ($resource->getAttributes() != []) {
             $validator = $resource->validate();
 
             if ($validator->fails()) {
@@ -416,7 +423,7 @@ trait InteractsWithAPI
      */
     protected function performInsert(Builder $query)
     {
-        if($this->beforeInsert($query) === false){
+        if ($this->beforeInsert($query) === false) {
             return;
         }
 
@@ -451,7 +458,6 @@ trait InteractsWithAPI
 
     public function afterSave($options, $query)
     {
-
     }
 
     public function beforeInsert($query)
@@ -461,7 +467,6 @@ trait InteractsWithAPI
 
     public function afterInsert($query)
     {
-
     }
 
     public function beforeUpdate($query)
@@ -471,7 +476,6 @@ trait InteractsWithAPI
 
     public function afterUpdate($query)
     {
-
     }
 
     /**
@@ -529,9 +533,10 @@ trait InteractsWithAPI
 
         $response = $query->delete();
 
-        if($response){
+        if ($response) {
             $this->afterDeleting();
         }
+
         return $response;
     }
 
@@ -542,7 +547,6 @@ trait InteractsWithAPI
 
     public function afterDeleting($query)
     {
-
     }
 
     /**
@@ -613,8 +617,7 @@ trait InteractsWithAPI
             return;
         }
 
-        if(method_exists($this, 'find'))
-        {
+        if (method_exists($this, 'find')) {
             return $this->find($this->getKey());
         }
 
@@ -650,11 +653,12 @@ trait InteractsWithAPI
     public function replicate(array $except = null)
     {
         $defaults = [
-            $this->getKeyName()
+            $this->getKeyName(),
         ];
 
         $attributes = Arr::except(
-            $this->attributes, $except ? array_unique(array_merge($except, $defaults)) : $defaults
+            $this->attributes,
+            $except ? array_unique(array_merge($except, $defaults)) : $defaults
         );
 
         return tap(new static($this->client), function ($instance) use ($attributes) {
@@ -690,27 +694,21 @@ trait InteractsWithAPI
 
     public function beforeQuery($query)
     {
-
     }
 
     public function beforePostQuery($query)
     {
-
     }
 
     public function beforePatchQuery($query)
     {
-
     }
 
     public function beforePutQuery($query)
     {
-
     }
 
     public function beforeDeleteQuery($query)
     {
-
     }
-
 }

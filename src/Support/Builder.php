@@ -4,8 +4,6 @@ namespace MacsiDigital\API\Support;
 
 use Illuminate\Support\Str;
 use MacsiDigital\API\Dev\Api;
-use Illuminate\Support\Collection;
-use MacsiDigital\API\Support\ResultSet;
 use MacsiDigital\API\Exceptions\HttpException;
 use MacsiDigital\API\Exceptions\ModelNotFoundException;
 
@@ -56,7 +54,7 @@ class Builder
         $this->raw($resource->client->getRaw());
         $this->withExceptions($resource->client->getThrowExceptionsIfRaw());
         $this->setPaginate($resource->client->getPagination());
-        if($this->shouldPaginate()){
+        if ($this->shouldPaginate()) {
             $this->paginate($resource->client->getDefaultPaginationRecords());
         }
         $this->setMaxPerPage($resource->client->getMaxPaginationRecords());
@@ -69,6 +67,7 @@ class Builder
     protected function setAllowedOperands(array $array)
     {
         $this->allowedOperands = $array;
+
         return $this;
     }
 
@@ -114,52 +113,60 @@ class Builder
     protected function setDefaultOperand($default)
     {
         $this->defaultOperand = $default;
+
         return $this;
     }
 
     protected function setPerPageField($field)
     {
         $this->perPageField = $field;
+
         return $this;
     }
 
     protected function setPageField($field)
     {
         $this->pageField = $field;
+
         return $this;
     }
 
     protected function setMaxPerPage($amount)
     {
         $this->maxPerPage = $amount;
+
         return $this;
     }
 
     protected function setMinPerPage($amount)
     {
         $this->minPerPage = $amount;
+
         return $this;
     }
 
-    public function attachFile($key, $file, $filename="")
+    public function attachFile($key, $file, $filename = "")
     {
         $this->files[$key] = ['file' => $file, 'filename' => $filename];
+
         return $this;
     }
 
     public function setContentType($type)
     {
         $this->contentType = $type;
+
         return $this;
     }
 
     public function asForm($boolean = true)
     {
         $this->asForm = $boolean;
+
         return $this;
     }
 
-    protected function retreiveEndPoint($type="get")
+    protected function retreiveEndPoint($type = "get")
     {
         return $this->resource->getEndPoint($type);
     }
@@ -169,18 +176,19 @@ class Builder
         return $this->resource->getApiDataField();
     }
 
-    public function find($id, $column="")
+    public function find($id, $column = "")
     {
-        if(is_array($id)){
+        if (is_array($id)) {
             return $this->whereIn($id, $column)->get(null, $raw);
         }
+
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('find').'/'.$id,
-            $this->combineQueries()
+            $this->combineQueries(),
         ]), "individual", "allow");
     }
 
-    public function findMany(array $id, $column="")
+    public function findMany(array $id, $column = "")
     {
         return $this->whereIn($id, $column)->get();
     }
@@ -188,50 +196,53 @@ class Builder
     public function findOrFail($id)
     {
         return $this->handleResponse($this->sendRequest('get', [
-            $this->retreiveEndPoint('get').'/'.$id
+            $this->retreiveEndPoint('get').'/'.$id,
         ]), "individual", "error");
     }
 
     public function firstOrFail()
     {
-        if(!is_null($model = $this->first())){
+        if (! is_null($model = $this->first())) {
             return $model;
         }
+
         throw (new ModelNotFoundException)->setModel(get_class($this->resource));
     }
 
     protected function processHeaders()
     {
-        if($this->asForm){
+        if ($this->asForm) {
             $this->request->asForm();
         }
-        if($this->contentType != ""){
+        if ($this->contentType != "") {
             $this->request->contentType($this->contentType);
         }
     }
 
     protected function processFiles()
     {
-        if($this->files != []){
-            foreach($this->files as $key => $file){
+        if ($this->files != []) {
+            foreach ($this->files as $key => $file) {
                 $this->request->attach($key, $file['file'], $file['filename']);
             }
         }
     }
 
-    public function sendRequest($method, $attributes){
+    public function sendRequest($method, $attributes)
+    {
         $this->processHeaders();
         $this->processFiles();
+
         return $this->request->$method(...$attributes);
     }
 
-    public function handleResponse($response, $type="individual", $ifEmpty="default")
+    public function handleResponse($response, $type = "individual", $ifEmpty = "default")
     {
-        if($this->raw){
+        if ($this->raw) {
             return $this->handleRaw($response);
-        } elseif($response->successful()){
+        } elseif ($response->successful()) {
             return $this->{'process'.Str::studly($type).'Response'}($response);
-        } elseif($response->getStatusCode() == 404){
+        } elseif ($response->getStatusCode() == 404) {
             return $this->handle404($response, $ifEmpty);
         } else {
             throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
@@ -240,9 +251,9 @@ class Builder
 
     public function handleRaw($response)
     {
-        if(!$this->throwExceptionsIfRaw){
+        if (! $this->throwExceptionsIfRaw) {
             return $response;
-        } elseif($response->successful()){
+        } elseif ($response->successful()) {
             return $response;
         } else {
             throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
@@ -251,9 +262,9 @@ class Builder
 
     public function handle404($response, $ifEmpty)
     {
-        if($ifEmpty == 'allow'){
+        if ($ifEmpty == 'allow') {
             return null;
-        } elseif($ifEmpty == 'error'){
+        } elseif ($ifEmpty == 'error') {
             return $response->throw();
         } else {
             throw new HttpException($response->status(), $this->prepareHttpErrorMessage($response));
@@ -263,24 +274,25 @@ class Builder
     public function all()
     {
         $this->setPerPageToMax();
-        if($this->resource->beforeQuery($this) === false){
+        if ($this->resource->beforeQuery($this) === false) {
             return;
         }
+
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get'),
             $this->addPagination($this->combineQueries()),
         ]), 'all');
-
     }
 
     public function get($type = 'get')
     {
-        if($this->resource->beforeQuery($this) === false){
+        if ($this->resource->beforeQuery($this) === false) {
             return;
         }
+
         return $this->handleResponse($this->sendRequest('get', [
             $this->retreiveEndPoint('get'),
-            $this->addPagination($this->combineQueries())
+            $this->addPagination($this->combineQueries()),
         ]), $type);
     }
 
@@ -289,50 +301,54 @@ class Builder
         return $this->get('individual');
     }
 
-    public function post($attributes, $type="individual")
+    public function post($attributes, $type = "individual")
     {
-        if($this->resource->beforePostQuery($this) === false){
+        if ($this->resource->beforePostQuery($this) === false) {
             return;
         }
+
         return $this->handleResponse($this->sendRequest('post', [
             $this->retreiveEndPoint('post'),
             $attributes,
-            $this->combineQueries()
+            $this->combineQueries(),
         ]), $type.'Post');
     }
 
-    public function patch($attributes, $type="individual")
+    public function patch($attributes, $type = "individual")
     {
-        if($this->resource->beforePatchQuery($this) === false){
+        if ($this->resource->beforePatchQuery($this) === false) {
             return;
         }
+
         return $this->handleResponse($this->sendRequest('patch', [
             $this->retreiveEndPoint('patch'),
             $attributes,
-            $this->combineQueries()
+            $this->combineQueries(),
         ]), $type.'Patch');
     }
 
-    public function put($attributes, $type="individual")
+    public function put($attributes, $type = "individual")
     {
-        if($this->resource->beforePutQuery($this) === false){
+        if ($this->resource->beforePutQuery($this) === false) {
             return;
         }
+
         return $this->handleResponse($this->sendRequest('put', [
             $this->retreiveEndPoint('put'),
             $attributes,
-            $this->combineQueries()
+            $this->combineQueries(),
         ]), $type.'Put');
     }
 
-    public function delete($type="individual")
+    public function delete($type = "individual")
     {
-        if($this->resource->beforeDeleteQuery($this) === false){
+        if ($this->resource->beforeDeleteQuery($this) === false) {
             return;
         }
+
         return $this->handleResponse($this->sendRequest('delete', [
             $this->retreiveEndPoint('delete'),
-            $this->combineQueries()
+            $this->combineQueries(),
         ]), $type.'Delete');
     }
 
@@ -349,39 +365,44 @@ class Builder
     public function firstWhere($column, $operand = null, $value = null)
     {
         $this->where($column, $operand, $value);
+
         return $this->first();
     }
 
     public function addQuery($key, $value)
     {
         $this->queries[$key] = $value;
+
         return $this;
     }
 
     public function whereRaw($column, $value)
     {
         $this->addQuery($column, $value);
+
         return $this;
     }
 
     public function where($column, $operand = null, $value = null)
     {
-        if(is_array($column)){
-            foreach($column as $query){
+        if (is_array($column)) {
+            foreach ($column as $query) {
                 $this->where(...$query);
             }
         } else {
-            if($value == null){
+            if ($value == null) {
                 $value = $operand;
                 $operand = $this->getDefaultOperand();
             }
             $this->addWhere($column, $operand, $value);
         }
+
         return $this;
     }
 
-    protected function addWhere($column, $operand, $value){
-        if($this->operandAllowed($operand)){
+    protected function addWhere($column, $operand, $value)
+    {
+        if ($this->operandAllowed($operand)) {
             $function = 'addWhere'.$this->getOperandTranslation($operand);
             $this->$function($column, $operand, $value);
         }
@@ -427,19 +448,21 @@ class Builder
         $this->wheres[] = ['column' => $column, 'operand' => $operand, 'value' => $value];
     }
 
-    public function whereIn(array $values, $column="")
+    public function whereIn(array $values, $column = "")
     {
         $string = implode(',', $values);
-        if($column == ''){
+        if ($column == '') {
             $column = $this->resource->getKeyName().'s';
         }
         $this->addQuery($column, $string);
+
         return $this;
     }
 
-    public function orderBy($value, $column='order')
+    public function orderBy($value, $column = 'order')
     {
         $this->orders[$column] = $value;
+
         return $this;
     }
 
@@ -448,9 +471,10 @@ class Builder
         return $this->get()->count();
     }
 
-    public function setPaginate($status=true)
+    public function setPaginate($status = true)
     {
         $this->paginate = $status;
+
         return $this;
     }
 
@@ -473,18 +497,19 @@ class Builder
     {
         $this->setPaginate(true);
         $this->setPerPage($perPage);
-        if($page != null){
+        if ($page != null) {
             $this->setPage($page);
         }
+
         return $this;
     }
 
     public function setPerPage($perPage)
     {
-        if($this->maxPerPage != '' && $this->minPerPage > $perPage){
+        if ($this->maxPerPage != '' && $this->minPerPage > $perPage) {
             $perPage = $this->minPerPage;
         }
-        if($this->maxPerPage != '' && $this->maxPerPage < $perPage){
+        if ($this->maxPerPage != '' && $this->maxPerPage < $perPage) {
             $perPage = $this->maxPerPage;
         }
         $this->perPage = $perPage;
@@ -513,15 +538,17 @@ class Builder
         return $this;
     }
 
-    public function raw($status=true)
+    public function raw($status = true)
     {
         $this->raw = $status;
+
         return $this;
     }
 
-    public function withExceptions($status=true)
+    public function withExceptions($status = true)
     {
         $this->throwExceptionsIfRaw = $status;
+
         return $this;
     }
 
@@ -538,15 +565,17 @@ class Builder
     protected function processQueries()
     {
         $this->processWheres();
+
         return array_merge($this->queries, $this->processedWheres);
     }
 
     protected function processWheres()
     {
-        foreach($this->wheres as $detail){
+        foreach ($this->wheres as $detail) {
             $function = 'ProcessWhere'.$this->getOperandTranslation($detail['operand']);
             $this->$function($detail);
         }
+
         return $this;
     }
 
@@ -597,12 +626,13 @@ class Builder
 
     public function addPagination($array)
     {
-        if($this->perPage != ''){
+        if ($this->perPage != '') {
             $array[$this->perPageField] = $this->perPage;
         }
-        if($this->page != ''){
+        if ($this->page != '') {
             $array[$this->pageField] = $this->page;
         }
+
         return $array;
     }
 
@@ -612,18 +642,21 @@ class Builder
         $this->resetOrders();
         $this->resetLimit();
         $this->resetOffset();
+
         return $this;
     }
 
     public function resetLimit()
     {
         $this->limit = null;
+
         return $this;
     }
 
     public function resetOffset()
     {
         $this->offset = null;
+
         return $this;
     }
 
@@ -633,12 +666,14 @@ class Builder
         $this->wheres = [];
         $this->processedWheres = [];
         $this->resetData();
+
         return $this;
     }
 
     public function resetOrders()
     {
         $this->orders = [];
+
         return $this;
     }
 
@@ -654,12 +689,12 @@ class Builder
 
     protected function processIndividualResponse($response)
     {
-        if($this->getApiDataField() != null){
+        if ($this->getApiDataField() != null) {
             $data = $response->json()[$this->getApiDataField()];
         } else {
             $data = $response->json();
         }
-        if(isset($data[0])){
+        if (isset($data[0])) {
             return $this->resource->newFromBuilder($this->resource->passOnAttributes($data[0]));
         } else {
             return $this->resource->newFromBuilder($this->resource->passOnAttributes($data));
@@ -668,12 +703,12 @@ class Builder
 
     protected function processIndividualPostResponse($response)
     {
-        if($this->getApiDataField() != null){
+        if ($this->getApiDataField() != null) {
             $data = $response->json()[$this->getApiDataField()];
         } else {
             $data = $response->json();
         }
-        if(isset($data[0])){
+        if (isset($data[0])) {
             return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
         } else {
             return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
@@ -696,12 +731,12 @@ class Builder
 
     protected function processIndividualPatchResponse($response)
     {
-        if($this->getApiDataField() != null){
+        if ($this->getApiDataField() != null) {
             $data = $response->json()[$this->getApiDataField()];
         } else {
             $data = $response->json();
         }
-        if(isset($data[0])){
+        if (isset($data[0])) {
             return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
         } else {
             return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
@@ -724,12 +759,12 @@ class Builder
 
     protected function processIndividualPutResponse($response)
     {
-        if($this->getApiDataField() != null){
+        if ($this->getApiDataField() != null) {
             $data = $response->json()[$this->getApiDataField()];
         } else {
             $data = $response->json();
         }
-        if(isset($data[0])){
+        if (isset($data[0])) {
             return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data[0]));
         } else {
             return $this->resource->updateFromBuilder($this->resource->passOnAttributes($data));
@@ -764,5 +799,4 @@ class Builder
     {
         return $response->json()['message'];
     }
-
 }

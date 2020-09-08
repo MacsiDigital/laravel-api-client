@@ -6,12 +6,11 @@ use MacsiDigital\API\Support\Resource;
 
 class User extends Resource
 {
-	protected $storeResource = 'MacsiDigital\API\Dev\Resources\StoreUser';
+    protected $storeResource = 'MacsiDigital\API\Dev\Resources\StoreUser';
     protected $updateResource = 'MacsiDigital\API\Dev\Resources\UpdateUser';
 
-    public function address() 
+    public function address()
     {
-    	return $this->hasOne(Address::class);
+        return $this->hasOne(Address::class);
     }
-    
 }
