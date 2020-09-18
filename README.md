@@ -5,7 +5,7 @@
 ![Header Image](https://github.com/MacsiDigital/repo-design/raw/master/laravel-api-client/header.png)
 
 <p align="center">
- <a href="https://github.com/MacsiDigital/laravel-api-client/actions?query=workflow%3Atests"><img src="https://github.com/MacsiDigital/laravel-api-client/workflows/Run%20tests/badge.svg" style="max-width:100%;"  alt="tests badge"></a>
+ <a href="https://github.com/MacsiDigital/laravel-api-client/actions?query=workflow%3ATests"><img src="https://github.com/MacsiDigital/laravel-api-client/workflows/Tests/badge.svg" style="max-width:100%;"  alt="tests badge"></a>
  <a href="https://packagist.org/packages/macsidigital/laravel-api-client"><img src="https://img.shields.io/packagist/v/macsidigital/laravel-api-client.svg?style=flat-square" alt="version badge"/></a>
  <a href="https://packagist.org/packages/macsidigital/laravel-api-client"><img src="https://img.shields.io/packagist/dt/macsidigital/laravel-api-client.svg?style=flat-square" alt="downloads badge"/></a>
 </p>
