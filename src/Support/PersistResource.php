@@ -147,11 +147,11 @@ class PersistResource
             foreach ($resource as $field => $rules) {
                 if ($this->hasRelation($key)) {
                     $relation = $this->getRelation($key)->type;
-                } elseif (method_exists($this->object, $key)) {
+                } elseif (!is_null($this->object) && method_exists($this->object, $key)) {
                     $relation = $this->object->$key()->type;
-                } elseif (method_exists($this->object, Str::studly($key))) {
+                } elseif (!is_null($this->object) && method_exists($this->object, Str::studly($key))) {
                     $relation = $this->object->{Str::studly($key)}()->type;
-                } elseif (method_exists($this->object, lcfirst($key))) {
+                } elseif (!is_null($this->object) && method_exists($this->object, lcfirst($key))) {
                     $relation = $this->object->{lcfirst($key)}()->type;
                 } else {
                     $relation = 'HasOne';
