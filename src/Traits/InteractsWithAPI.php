@@ -525,12 +525,12 @@ trait InteractsWithAPI
         if (! $this->hasKey()) {
             return;
         }
-        $this->beforeDeleting();
+        $this->beforeDeleting($query);
 
         $response = $query->delete();
 
         if($response){
-            $this->afterDeleting();
+            $this->afterDeleting($query);
         }
         return $response;
     }
