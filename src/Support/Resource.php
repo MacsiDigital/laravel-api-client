@@ -5,7 +5,6 @@ use MacsiDigital\API\Contracts\Entry;
 use MacsiDigital\API\Traits\HasAttributes;
 use MacsiDigital\API\Traits\HasRelationships;
 use MacsiDigital\API\Traits\HidesAttributes;
-use MacsiDigital\API\Support\Entry as EntryClass;
 
 class Resource
 {
@@ -15,7 +14,6 @@ class Resource
 
     public function __construct(Entry $client = null, $attributes = [])
     {
-        if (!$client) $this->client = new EntryClass;
         $this->client = $client;
 
         $this->syncOriginal();
