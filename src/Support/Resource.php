@@ -12,7 +12,7 @@ class Resource
 
     public $client;
 
-    public function __construct(Entry $client, $attributes = [])
+    public function __construct(Entry $client = null, $attributes = [])
     {
         $this->client = $client;
 
