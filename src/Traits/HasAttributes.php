@@ -49,7 +49,16 @@ trait HasAttributes
 
     public function getDates(): array
     {
-        return $this->dates ?? [];
+        // For Laravel 7 and below
+        if (\property_exists($this, 'dates')) {
+            return $this->dates;
+        }
+
+        $dates = \array_filter($this->getCasts(), function (string $cast) {
+            return $this->isDateCastable($cast);
+        });
+
+        return \array_keys($dates);
     }
 
     /**
