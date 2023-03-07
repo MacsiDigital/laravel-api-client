@@ -53,11 +53,7 @@ trait HasAttributes
             return $this->dates;
         }
 
-        $dates = \array_filter($this->getCasts(), function (string $cast) {
-            return $this->isDateCastable($cast);
-        });
-
-        return \array_keys($dates);
+        return [];
     }
 
     /**
