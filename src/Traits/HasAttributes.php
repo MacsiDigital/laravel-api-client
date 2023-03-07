@@ -49,7 +49,7 @@ trait HasAttributes
 
     public function getDates()
     {
-        return $this->dates;
+        return $this->dates ?? [];
     }
 
     /**
