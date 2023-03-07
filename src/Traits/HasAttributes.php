@@ -47,7 +47,7 @@ trait HasAttributes
         return false;
     }
 
-    public function getDates()
+    public function getDates(): array
     {
         return $this->dates ?? [];
     }
