@@ -49,7 +49,6 @@ trait HasAttributes
 
     public function getDates(): array
     {
-        // For Laravel 7 and below
         if (\property_exists($this, 'dates')) {
             return $this->dates;
         }
