@@ -12,6 +12,8 @@ class Resource
 
     public $client;
 
+    protected static $ResourcesShouldPreventAccessingMissingAttributes = false;
+
     public function __construct(Entry $client = null, $attributes = [])
     {
         $this->client = $client;
@@ -19,6 +21,18 @@ class Resource
         $this->syncOriginal();
 
         $this->fill($attributes);
+    }
+
+
+    /**
+     * Determine if accessing missing attributes is disabled.
+     * Nested Requirement originating from the Laravel 10 HasAttributes Trait
+     *
+     * @return bool
+     */
+    public static function preventsAccessingMissingAttributes()
+    {
+        return static::$ResourcesShouldPreventAccessingMissingAttributes;
     }
 
     /**
