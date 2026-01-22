@@ -1,11 +1,11 @@
 {
-    "name": "macsidigital/laravel-api-client",
+    "name": "yabbasdev/laravel-api-client",
     "description": "Laravel API Client Builder package",
     "keywords": [
         "macsidigital",
         "laravel-api-client"
     ],
-    "homepage": "https://github.com/macsidigital/laravel-api-client",
+    "homepage": "https://github.com/yabbasdev/laravel-api-client",
     "license": "MIT",
     "type": "library",
     "authors": [{
@@ -13,18 +13,24 @@
         "email": "colin@macsi.co.uk"
     }],
     "require": {
-        "php": "^7.3|^8.0|^8.1",
-        "nesbot/carbon": "^1.26.3 || ^2.0",
+        "php": "^7.3|^8.0|^8.1|^8.2|^8.3",
+        "nesbot/carbon": "^1.26.3 || ^2.0 || ^3.0 || ^3.8.4",
         "guzzlehttp/guzzle": "~7.0|~6.0|~5.0|~4.0",
         "guzzlehttp/oauth-subscriber": "^0.6.0",
         "firebase/php-jwt": "^6.0",
-        "illuminate/support": "^7.0|^8.0|^9.0|^10.0",
-        "macsidigital/laravel-oauth2-client": "^1.2|^2.0"
+        "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0",
+        "yabbasdev/laravel-oauth2-client": "dev-master"
     },
     "require-dev": {
         "orchestra/testbench": "^4.0|^5.0|^6.0|^7.0",
-        "phpunit/phpunit": "^8.0|^9.0|^10.0"
+        "phpunit/phpunit": "^8.0|^9.0|^10.0 | ^11.0"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/yabbasdev/laravel-oauth2-client"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "MacsiDigital\\API\\": "src"
